@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
-import ecbLogo from "@/assets/ecb-logo.png.asset.json";
+import lslLogo from "@/assets/lsl-logo.png";
 
 type Props = { children: ReactNode; className?: string; tone?: "default" | "wallet" | "social" };
 
 /**
  * Themed wrapper that gives any user-facing page the same
- * gold-brown + emerald glassmorphism + animated aurora + ECB logo
+ * gold-brown + emerald glassmorphism + animated aurora + LSL logo
  * watermark used on the admin console.
  */
 export function PageShell({ children, className = "", tone = "default" }: Props) {
@@ -15,7 +15,7 @@ export function PageShell({ children, className = "", tone = "default" }: Props)
       <div
         className="page-shell-logo"
         aria-hidden
-        style={{ backgroundImage: `url(${ecbLogo.url})` }}
+        style={{ backgroundImage: `url(${lslLogo})` }}
       />
       <div className="page-shell-content">{children}</div>
     </div>

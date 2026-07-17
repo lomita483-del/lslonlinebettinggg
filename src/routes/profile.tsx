@@ -12,14 +12,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Your Profile — ECB" },
-      { name: "description", content: "Manage your ECB profile, contact details, avatar, and gang affiliation." },
-      { property: "og:title", content: "Your Profile — ECB" },
-      { property: "og:description", content: "Manage your ECB profile, contact details, avatar, and gang affiliation." },
-      { property: "og:url", content: "/profile" },
-      { name: "robots", content: "noindex" },
+      { title: "Your Profile — LSL" },
+      { name: "description", content: "Manage your LSL profile, contact details, avatar, and gang affiliation." },
     ],
-    links: [{ rel: "canonical", href: "/profile" }],
   }),
   component: ProfilePage,
 });

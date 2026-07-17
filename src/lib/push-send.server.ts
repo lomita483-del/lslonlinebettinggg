@@ -70,13 +70,12 @@ export async function sendToSubscriptions(
   webpush: any,
   supabaseAdmin: any,
   subs: any[],
-  content: { title: string; body?: string; link?: string; tag?: string; image?: string },
+  content: { title: string; body?: string; link?: string; tag?: string },
 ) {
   const payload = JSON.stringify({
     title: content.title,
     body: content.body || "",
     link: content.link || "/",
-    image: content.image || undefined,
     tag: content.tag || "broadcast-" + Date.now(),
     requireInteraction: true,
   });

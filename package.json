@@ -56,7 +56,6 @@
     "react": "^19.2.0",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.0",
-    "react-easy-crop": "^6.2.2",
     "react-hook-form": "^7.78.0",
     "react-resizable-panels": "^4.11.2",
     "recharts": "^3.8.1",
@@ -71,7 +70,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.7.4",
+    "@lovable.dev/vite-tanstack-config": "2.7.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
