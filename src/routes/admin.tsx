@@ -5329,7 +5329,8 @@ function SettingsPanel() {
 
   // Only columns confirmed to exist in this Lomita Shooters League app_settings table.
   const settingsColumns = [
-    "maintenance_mode", "maintenance_message", "closed_mode", "closed_message", "private_mode",
+    "maintenance_mode", "maintenance_message", "maintenance_image", "closed_mode", "closed_message", "closed_image", "private_mode", "allow_signups",
+    "tutorials_enabled", "tutorials_for_new_users", "tutorials_for_new_signins", "tutorials_for_visitors",
     "contact_email", "contact_phone", "contact_whatsapp", "terms_content", "about_us",
     "why_trust_us", "site_name", "platform_name", "platform_tagline", "platform_description",
     "site_logo_url", "platform_logo_url", "platform_logo_auth_url", "platform_logo_voucher_url",
@@ -5377,12 +5378,13 @@ function SettingsPanel() {
 
   const update = (key: string, value: any) => setSettings((current: any) => ({ ...current, [key]: value }));
   const switches: [string, string][] = [
-    ["maintenance_mode", "Maintenance mode"], ["closed_mode", "Temporarily close the website"], ["private_mode", "Private website — require login"],
+    ["maintenance_mode", "Maintenance mode"], ["closed_mode", "Close website"], ["private_mode", "Private — login required"], ["allow_signups", "Allow new sign-ups"],
     ["lottery_enabled", "Enable lottery"], ["ticker_enabled", "Enable announcement ticker"],
     ["shop_enabled", "Enable shop"], ["spin_enabled", "Enable spin rewards"],
     ["gift_enabled", "Enable player gifts"], ["friends_enabled", "Enable friends"],
     ["vip_enabled", "Enable VIP features"], ["admin_ai_enabled", "Enable admin AI tools"],
-    ["daily_login_enabled", "Enable daily login rewards"], ["allow_rebet", "Allow repeat bets"],
+    ["tutorials_enabled", "Enable Tutorials"], ["tutorials_for_new_users", "For New Users — show welcome tour"], ["tutorials_for_new_signins", "For New Sign-ins — offer tours again"], ["tutorials_for_visitors", "For Visitors — allow preview tours"],
+    ["daily_login_enabled", "Enable daily login rewards"], ["allow_rebet", "Re-bet — allow another bet after placement"],
     ["futures_repeat_tickets_enabled", "Allow repeat futures tickets"],
     ["virtual_cycle_running", "Run virtual match cycles"],
   ];
@@ -5390,8 +5392,8 @@ function SettingsPanel() {
     ["site_name", "Website name", "text"], ["platform_name", "Platform name", "text"],
     ["platform_tagline", "Platform tagline", "text"], ["platform_description", "Platform description", "textarea"],
     ["hero_title", "Homepage headline", "text"], ["hero_subtitle", "Homepage subtitle", "textarea"],
-    ["hero_tagline", "Homepage tagline", "text"], ["maintenance_message", "Maintenance notice", "textarea"],
-    ["closed_message", "Website-closed notice", "textarea"], ["contact_email", "Contact email", "text"],
+    ["hero_tagline", "Homepage tagline", "text"], ["maintenance_message", "Message shown during maintenance", "textarea"],
+    ["closed_message", "Website Closed Notice", "textarea"], ["contact_email", "Contact email", "text"],
     ["contact_phone", "Contact phone", "text"], ["contact_whatsapp", "WhatsApp contact", "text"],
     ["terms_content", "Terms and conditions", "textarea"], ["about_us", "About the league", "textarea"],
     ["why_trust_us", "Trust and safety copy", "textarea"], ["ticker_text", "Announcement ticker text", "textarea"],
@@ -5452,12 +5454,12 @@ function SettingsPanel() {
     {settings && <>
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
         <div><h3 className="font-bold">Website availability</h3><p className="text-sm text-muted-foreground">Control maintenance, temporary closure, and private access. In private mode, visitors must sign in or register before viewing the site.</p></div>
-        <div className="grid gap-3 md:grid-cols-2">{switches.slice(0,3).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{switches.slice(0,4).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
       </section>
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
         <h3 className="font-bold">Feature controls</h3>
         <p className="text-sm text-muted-foreground">Enable or disable supported features without changing or deleting their records.</p>
-        <div className="grid gap-3 md:grid-cols-2">{switches.slice(3).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{switches.slice(4).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
       </section>
       {section("Branding and homepage", "Edit the site's identity and homepage text while keeping Shooters League branding.", ["site_name","platform_name","platform_tagline","platform_description","hero_title","hero_subtitle","hero_tagline"])}
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
@@ -5474,7 +5476,16 @@ function SettingsPanel() {
           <ImageSettingControl label="Social sharing / Open Graph image" value={settings.platform_og_image_url} onChange={value => update("platform_og_image_url", value)} aspect="1.91 / 1" help="Preview image for social sharing links." showFitControls={false} />
         </div>
       </section>
-      {section("Contact, legal and announcements", "Update public contact information, legal copy and ticker content.", ["contact_email","contact_phone","contact_whatsapp","terms_content","about_us","why_trust_us","maintenance_message","closed_message","ticker_text","lottery_intro"])}
+      {section("Maintenance and website closure", "These notices are shown to non-admin visitors when the matching mode is enabled.", ["maintenance_message","closed_message"])}
+      <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+        <h3 className="font-bold">Maintenance and closure artwork</h3>
+        <p className="text-sm text-muted-foreground">Optional images or animated GIFs shown on maintenance and closed-site screens. Uploads are capped at 5 MB.</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <ImageSettingControl label="Maintenance banner image / GIF" value={settings.maintenance_image} onChange={value => update("maintenance_image", value)} aspect="16 / 9" help="Shown while maintenance mode is enabled." showFitControls={false} />
+          <ImageSettingControl label="Closed website image / GIF" value={settings.closed_image} onChange={value => update("closed_image", value)} aspect="16 / 9" help="Shown while the website is closed." showFitControls={false} />
+        </div>
+      </section>
+      {section("Contact, legal and announcements", "Update public contact information, legal copy and ticker content.", ["contact_email","contact_phone","contact_whatsapp","terms_content","about_us","why_trust_us","ticker_text","lottery_intro"])}
       {section("Betting and withdrawal limits", "These limits apply to the existing betting system; verify values before saving.", ["min_stake","max_payout","min_withdrawal","min_selections_per_ticket","max_selections_per_ticket","exposure_warn_pct","house_low_balance"])}
       {section("Lottery and rewards", "Configure lottery, spin, login streak, XP and referral rewards.", ["lottery_min_stake","lottery_max_stake","daily_login_base_reward","daily_login_bonus_per_day","daily_login_max_streak","xp_per_bet","xp_per_win","xp_per_login","xp_per_referral","referral_bonus_referrer","referral_bonus_referee","spin_min_reward","spin_max_reward","spin_cooldown_hours","challenge_reward_multiplier","gift_daily_limit","gift_min_amount","gift_max_per_tx","gift_fee_pct"])}
       {section("Virtual game configuration", "Tune the existing virtual-game limits and timing. This does not enable the excluded Instant E-Football or Championship E-Football modes.", ["virtual_payout_multiplier","virtual_min_stake","virtual_max_stake","virtual_xp_per_win","virtual_win_bonus_tokens","virtual_round_duration_seconds","virtual_animation_seconds","virtual_max_score","virtual_concurrent_rounds","virtual_max_payout","virtual_min_selections","virtual_max_selections","virtual_lock_window_seconds","virtual_matches_per_round"])}
