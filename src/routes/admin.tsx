@@ -3915,15 +3915,25 @@ function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string)
   };
   return (
     <>
-      <Card className="border-primary/20 bg-card/60 p-3">
-        <button type="button" onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 p-3 text-left transition hover:bg-primary/20">
-          <span className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/20 text-primary"><Gamepad2 className="h-5 w-5" /></span>
-            <span><span className="block text-sm font-black text-primary">Quick Action</span>
-              <span className="block text-[10px] text-muted-foreground">Open all {actions.length} admin tools</span></span>
+      <Card className="relative overflow-hidden border-primary/40 bg-card/80 p-3 shadow-[0_0_24px_hsl(var(--primary)/0.15)]">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
+        <button type="button" onClick={() => setOpen(true)} aria-label="Open Quick Actions admin tools"
+          className="group relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 border-primary/60 bg-gradient-to-r from-primary/20 via-primary/10 to-card px-4 py-4 text-left shadow-[0_0_18px_hsl(var(--primary)/0.24)] transition-all duration-300 hover:border-primary hover:shadow-[0_0_32px_hsl(var(--primary)/0.45)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.99]">
+          <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl border border-primary/25 animate-pulse motion-reduce:animate-none" />
+          <span className="relative flex min-w-0 items-center gap-3">
+            <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.55)]">
+              <Gamepad2 className="h-6 w-6" />
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-card bg-primary animate-pulse motion-reduce:animate-none" />
+            </span>
+            <span className="min-w-0">
+              <span className="mb-1 inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary"><Sparkles className="h-3 w-3" /> Admin command center</span>
+              <span className="block text-base font-black tracking-wide text-foreground sm:text-lg">QUICK ACTIONS</span>
+              <span className="block text-xs font-medium text-muted-foreground">Tap here to open all {actions.length} admin tools</span>
+            </span>
           </span>
-          <ChevronRight className="h-5 w-5 text-primary" />
+          <span className="relative flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-2 text-xs font-extrabold text-primary-foreground shadow-[0_0_14px_hsl(var(--primary)/0.35)] transition-transform group-hover:translate-x-1">
+            OPEN <ChevronRight className="h-4 w-4" />
+          </span>
         </button>
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
