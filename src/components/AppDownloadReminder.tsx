@@ -16,7 +16,7 @@ export function AppDownloadReminder() {
   const { isAdmin } = useAuth();
 
   useEffect(() => {
-    if (typeof window === "undefined" || isEcbAndroidWebView() || isAdmin) return;
+    if (typeof window === "undefined" || isLslAndroidWebView() || isAdmin) return;
     if (window.matchMedia?.("(display-mode: standalone)").matches) return;
 
     const last = Number(localStorage.getItem(DISMISS_KEY) || 0);
