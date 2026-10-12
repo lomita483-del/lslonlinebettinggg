@@ -95,7 +95,7 @@ import { CasinoHistoryPanel } from "@/components/admin/CasinoHistoryPanel";
 import { TopBetsPanel } from "@/components/admin/TopBetsPanel";
 import { TournamentAdminPanel } from "@/components/admin/TournamentAdminPanel";
 import { BrandingAdminPanel } from "@/components/admin/BrandingAdminPanel";
-import { SettingsPanel } from "@/components/admin/SettingsPanel";
+import { SettingsPanel as AdminSettingsPanel } from "@/components/admin/SettingsPanel";
 import { WagersAdminPanel } from "@/components/admin/WagersAdminPanel";
 import { seedLegacyUsers } from "@/lib/seed-users.functions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -300,7 +300,7 @@ export function AdminPage() {
             <TabsContent value="audit" className="mt-4"><AuditPanel /></TabsContent>
             <TabsContent value="analytics" className="mt-4"><AnalyticsPanel /></TabsContent>
             <TabsContent value="ads" className="mt-4 space-y-6"><PopupAdsAdminPanel /><div className="border-t border-border pt-6"><VideoAdsAdminPanel /></div></TabsContent>
-            <TabsContent value="settings" className="mt-4"><SettingsPanel /></TabsContent>
+            <TabsContent value="settings" className="mt-4"><AdminSettingsPanel /></TabsContent>
             <TabsContent value="appupdates" className="mt-4"><AndroidAppUpdatesPanel /></TabsContent>
             <TabsContent value="adminai" className="mt-4"><AdminAILivePanel /></TabsContent>
             <TabsContent value="risk" className="mt-4"><RiskPanel /></TabsContent>
