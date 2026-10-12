@@ -189,7 +189,7 @@ html.light body {
     pointer-events: none;
     background-image:
       linear-gradient(rgba(4, 10, 24, 0.08), rgba(4, 10, 24, 0.08)),
-      url("/efootball-pirate-background.svg");
+      radial-gradient(ellipse at top, rgba(212, 175, 55, 0.10), transparent 65%);
     background-repeat: no-repeat;
     background-position: center;
     background-size: cover;
