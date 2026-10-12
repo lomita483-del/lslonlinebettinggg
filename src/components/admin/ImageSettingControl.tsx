@@ -62,6 +62,7 @@ export function ImageSettingControl({
   const [pendingCrop, setPendingCrop] = useState<File | null>(null);
 
   async function onPickFile(f: File) {
+    if (f.size > 5 * 1024 * 1024) { toast.error("Images and GIFs must be 5 MB or smaller."); return; }
     // Animated media (GIF / animated WEBP / APNG) must bypass crop + resize:
     // both run through <canvas>, which would flatten them to one frame.
     if (await isAnimatedImage(f)) {
