@@ -100,6 +100,7 @@ export function TourGuide({ tourKey, steps, pageName }: { tourKey: string; steps
   }, [localKey, stepIndex, tourKey, user]);
 
   const activeStep = steps[stepIndex];
+  const tourProgress = Math.round(((stepIndex + 1) / Math.max(steps.length, 1)) * 100);
   const updateTarget = useCallback(() => {
     if (mode !== "tour" || !activeStep) return;
     const element = document.querySelector(activeStep.target);
@@ -142,25 +143,25 @@ export function TourGuide({ tourKey, steps, pageName }: { tourKey: string; steps
   return <>
     <Dialog open={mode === "welcome"} onOpenChange={(open) => { if (!open) dismiss("remind_later"); }}>
       <DialogContent className="max-w-xl overflow-hidden border-primary/45 bg-card p-0 shadow-gold">
-        <div className="h-1 bg-gradient-gold" />
+        <div className="h-1.5 bg-gradient-gold" />
         <div className="p-6 sm:p-8">
           <span className="mb-5 grid h-14 w-14 place-items-center rounded-md border border-primary/40 bg-primary/10 text-primary"><Compass className="h-7 w-7" /></span>
           {pageName && <div className="mb-2 text-[10px] font-black uppercase tracking-[0.3em] text-primary">Page tour • {pageName}</div>}
           <DialogHeader>
             <DialogTitle className="text-left text-3xl font-black">Welcome to {pageName ?? "the platform"}, {displayName}! 👋</DialogTitle>
             <DialogDescription className="pt-2 text-left text-base leading-relaxed">
-              This quick walkthrough explains every section of the <b className="text-foreground">{pageName ?? "current"}</b> page — what each area does and how to use it. {steps.length} short steps.
+              Follow an interactive, step-by-step guide to the <b className="text-foreground">{pageName ?? "current"}</b> page — what each area does and how to use it. {steps.length} guided stops, with highlighted controls and progress tracking.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-7 grid gap-2 sm:grid-cols-2">
-            <Button className="btn-luxury sm:col-span-2" onClick={start}>Start Tutorial <ChevronRight className="h-4 w-4" /></Button>
+            <Button className="btn-luxury sm:col-span-2" onClick={start}>Explore This Page <ChevronRight className="h-4 w-4" /></Button>
             <Button variant="outline" onClick={() => dismiss("remind_later")}>Remind Me Later</Button>
             <Button variant="ghost" onClick={() => dismiss("skipped")}>Skip Tutorial</Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-    {mode === "tour" && activeStep && <div className="fixed inset-0 z-[250]" role="dialog" aria-modal="true" aria-label={`${activeStep.title} tutorial step`}>
+    {mode === "tour" && activeStep && <div className="fixed inset-0 z-[250]" role="dialog" aria-modal="true" aria-label={`${activeStep.title} tutorial step`}><div className="pointer-events-none fixed left-0 top-0 z-[260] h-1.5 bg-primary shadow-[0_0_14px_hsl(var(--primary)/0.8)] transition-[width] duration-300" style={{ width: `${tourProgress}%` }} />
       <div className="absolute inset-0 bg-background/78 backdrop-blur-[1px]" />
       {targetRect && <div className="pointer-events-none fixed rounded-md border-2 border-primary bg-primary/5 shadow-[0_0_0_9999px_color-mix(in_oklab,var(--background)_78%,transparent),0_0_30px_var(--primary)] transition-all duration-300" style={{ top: targetRect.top - 7, left: targetRect.left - 7, width: targetRect.width + 14, height: targetRect.height + 14 }} />}
       {connector && <svg className="pointer-events-none fixed inset-0 h-full w-full overflow-visible" aria-hidden><defs><marker id="tour-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" className="fill-primary" /></marker></defs><line x1={connector.x1} y1={connector.y1} x2={connector.x2} y2={connector.y2} className="stroke-primary" strokeWidth="2" strokeDasharray="5 5" markerEnd="url(#tour-arrow)" /></svg>}
