@@ -183,7 +183,10 @@ function AdaptiveViewport() {
     const isAndroidApp = /LSLAndroidApp\//.test(navigator.userAgent);
     const responsiveViewport = "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
     const androidViewport = "width=1280, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
-    // On phone-sized screens, use the desktop-width viewport automatically.\n    // Full-size desktop browsers retain their normal responsive viewport.\n    const phoneScreen = Math.min(window.screen.width, window.screen.height) <= 767;\n    const targetViewport = isAndroidApp || phoneScreen ? androidViewport : responsiveViewport;
+    // On phone-sized screens, use the desktop-width viewport automatically.
+    // Full-size desktop browsers retain their normal responsive viewport.
+    const phoneScreen = Math.min(window.screen.width, window.screen.height) <= 767;
+    const targetViewport = isAndroidApp || phoneScreen ? androidViewport : responsiveViewport;
     const apply = () => {
       if (meta.getAttribute("content") !== targetViewport) meta.setAttribute("content", targetViewport);
     };
