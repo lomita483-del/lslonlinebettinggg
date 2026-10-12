@@ -228,7 +228,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="lsl-mobile-layout-scale relative min-h-screen">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-b from-card/80 to-card/50 border-b border-primary/20 shadow-[0_2px_30px_-12px_rgba(0,0,0,0.6)]">
+      <header className="sticky top-0 z-50 bg-card/95 border-b-2 border-primary/40 shadow-[0_4px_24px_-10px_hsl(var(--primary)/0.4)]">
         {navBg && (
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
             <img
@@ -242,7 +242,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         )}
         <DesktopCanvas active={true}>
-        <div className="container mx-auto px-4 flex h-16 items-center gap-3 lg:gap-4 relative">
+        <div className="container mx-auto px-4 flex h-[72px] items-center gap-3 lg:gap-4 relative">
           <Link to="/" className="flex items-center gap-2 group shrink-0">
             {branding.logoUrl ? (
               <img
