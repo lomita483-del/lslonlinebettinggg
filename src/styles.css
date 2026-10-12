@@ -2,11 +2,6 @@
 @source "../src";
 @import "tw-animate-css";
 
-/* LSL UI parity layer: compatible dashboard styles ported from the updated source project. */
-@import "./styles/admin-console-redesign.css";
-@import "./styles/admin-dashboard-layout.css";
-@import "./styles/user-dashboard-premium.css";
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -189,7 +184,7 @@ html.light body {
     pointer-events: none;
     background-image:
       linear-gradient(rgba(4, 10, 24, 0.08), rgba(4, 10, 24, 0.08)),
-      radial-gradient(ellipse at top, rgba(212, 175, 55, 0.10), transparent 65%);
+      url("/efootball-pirate-background.svg");
     background-repeat: no-repeat;
     background-position: center;
     background-size: cover;
@@ -1322,41 +1317,3 @@ html.light body {
   overscroll-behavior-y: none;
   scroll-padding-top: 0;
 }
-
-
-/* LSL premium theme polish — responsive refinements without altering brand tokens. */
-@layer components {
-  .glass,
-  .glass-strong {
-    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .glass:hover,
-    .glass-strong:hover {
-      border-color: color-mix(in oklch, var(--primary) 32%, transparent);
-      box-shadow: 0 12px 32px -22px color-mix(in oklch, var(--primary) 35%, transparent);
-    }
-  }
-  :where(button, a, input, select, textarea):focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 3px;
-  }
-  @media (max-width: 640px) {
-    .container {
-      padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
-    }
-    .glass,
-    .glass-strong {
-      max-width: 100%;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .glass,
-    .glass-strong {
-      transition: none;
-    }
-  }
-}
-
-
-
