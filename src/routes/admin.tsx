@@ -5378,7 +5378,7 @@ function SettingsPanel() {
     } else {
       try {
         await logAudit("settings_updated", "app_settings", "1", {
-          changed_fields: settingsColumns.filter((key) => JSON.stringify(patch[key]) !== JSON.stringify(settings[key])),
+          saved_fields: settingsColumns,
         });
       } catch (auditError) {
         console.error("Settings audit log failed:", auditError);
