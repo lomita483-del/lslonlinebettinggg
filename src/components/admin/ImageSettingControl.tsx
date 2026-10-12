@@ -118,7 +118,7 @@ export function ImageSettingControl({
       </div>
 
       {/* Live preview */}
-      <div className="rounded-md border border-border overflow-hidden" style={{ aspectRatio: aspect, background: previewBg }}>
+      <div className="w-full max-w-[420px] rounded-md border border-border overflow-hidden" style={{ aspectRatio: aspect, background: previewBg }}>
         {value ? (
           <img
             src={value}
