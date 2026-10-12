@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Layout } from "@/components/Layout";
+import { ShootersGameEntry } from "@/components/ShootersGameEntry";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -158,6 +159,8 @@ function VirtualPage() {
   return (
     <Layout>
       <div className="virtual-page min-h-[calc(100vh-4rem)]">
+        <div className="container pt-6 text-center"><p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">LSL Virtual Arenas</p><h1 className="mt-2 text-3xl sm:text-4xl font-black gradient-gold-text">Pick your battlefield</h1><p className="mt-2 text-sm text-muted-foreground">Two shooters formats. Choose your arena.</p></div>
+        <ShootersGameEntry />
         <div className="container py-4 sm:py-6 space-y-4">
           <RoundHeader featured={featured} phase={phase} round={round} />
 
