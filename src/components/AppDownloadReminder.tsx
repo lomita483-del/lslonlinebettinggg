@@ -3,11 +3,11 @@ import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
-const DISMISS_KEY = "ecb-app-download-reminder";
+const DISMISS_KEY = "lsl-app-download-reminder";
 const REMIND_DAYS = 7;
-const APK_URL = "https://raw.githubusercontent.com/lomita483-del/efootballcompetitionbetting/main/public/downloads/efootball-competition-bet-latest.apk";
+const APK_URL = "https://github.com/lomita483-del/lslonlinebettinggg/releases/latest";
 
-function isEcbAndroidWebView() {
+function isLslAndroidWebView() {
   return typeof navigator !== "undefined" && /LSLAndroidApp\/[0-9.]+/i.test(navigator.userAgent);
 }
 
