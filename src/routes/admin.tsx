@@ -5319,7 +5319,36 @@ function BetTrackerPanel() {
 }
 
 function SettingsPanel() {
-  return <AdminDataTable title="Application Settings (read-only)" table="app_settings" columns={["id", "updated_at"]} />;
+  const [settings, setSettings] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const load = async () => {
+    const result = await (supabase as any).from("app_settings").select("maintenance_mode,maintenance_message,contact_email,contact_phone,min_stake,max_payout").eq("id", 1).maybeSingle();
+    if (result.error) setError(result.error.message);
+    else { setError(""); setSettings(result.data); }
+  };
+  useEffect(() => { void load(); }, []);
+  const save = async () => {
+    setBusy(true);
+    const { data, error: err } = await (supabase as any).from("app_settings").update(settings).eq("id", 1).select("id");
+    setBusy(false);
+    if (err || !data?.length) toast.error(err?.message || "Settings update was not permitted");
+    else toast.success("Settings saved successfully");
+  };
+  return <Card className="space-y-4 border-primary/30 p-5">
+    <h2 className="text-xl font-black text-primary">Website Settings</h2>
+    <p className="text-sm text-muted-foreground">Edit live application settings. Changes are saved only when you press Save.</p>
+    {error && <p role="alert" className="text-destructive">{error}</p>}
+    {!settings && !error && <p>Loading settings…</p>}
+    {settings && <>
+      <label className="flex items-center justify-between gap-3"><span>Maintenance mode</span><Switch checked={!!settings.maintenance_mode} onCheckedChange={value => setSettings((s: any) => ({...s, maintenance_mode: value}))} /></label>
+      {(["maintenance_message","contact_email","contact_phone","min_stake","max_payout"] as const).map(key => <label key={key} className="block space-y-1">
+        <span className="text-sm font-semibold">{key.replace(/_/g," ").toUpperCase()}</span>
+        <Input type={key === "min_stake" || key === "max_payout" ? "number" : "text"} value={settings[key] ?? ""} onChange={event => setSettings((s: any) => ({...s, [key]: key === "min_stake" || key === "max_payout" ? Number(event.target.value) : event.target.value}))} />
+      </label>)}
+      <div className="flex gap-2"><Button onClick={() => void save()} disabled={busy}>{busy ? "Saving…" : "Save Settings"}</Button><Button variant="outline" onClick={() => void load()} disabled={busy}>Reload</Button></div>
+    </>}
+  </Card>;
 }
 
 function AttendancePanel() {
