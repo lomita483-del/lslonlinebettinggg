@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
@@ -77,7 +78,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "google-site-verification", content: "VmJKgEfwpQsNav2Nc0ItKNySizECxM7nnKuyxh-A5gM" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -166,6 +167,58 @@ import { PopupAd } from "@/components/PopupAd";
 import { BetSlipFab } from "@/components/BetSlip";
 import { RouteProgress } from "@/components/RouteProgress";
 
+/**
+ * Match the source project's viewport behavior without changing LSL branding.
+ * Browsers use a device-width viewport; only the dedicated LSL Android app
+ * uses the 1280px canvas viewport. The existing DesktopCanvas handles fitting.
+ */
+function AdaptiveViewport() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const meta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    if (!meta) return;
+    const isAndroidApp = /LSLAndroidApp\//.test(navigator.userAgent);
+    const responsiveViewport = "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
+    const androidViewport = "width=1280, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
+    const targetViewport = isAndroidApp ? androidViewport : responsiveViewport;
+    const apply = () => {
+      if (meta.getAttribute("content") !== targetViewport) meta.setAttribute("content", targetViewport);
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    window.addEventListener("orientationchange", apply);
+    window.visualViewport?.addEventListener("resize", apply);
+    return () => {
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("orientationchange", apply);
+      window.visualViewport?.removeEventListener("resize", apply);
+    };
+  }, [isAdmin]);
+  useEffect(() => {
+    if (typeof window === "undefined" || !isAdmin || /LSLAndroidApp\//.test(navigator.userAgent)) return;
+    const stop = (event: Event) => event.preventDefault();
+    const onTouch = (event: TouchEvent) => { if (event.touches.length > 1) event.preventDefault(); };
+    const onWheel = (event: WheelEvent) => { if (event.ctrlKey) event.preventDefault(); };
+    document.addEventListener("gesturestart", stop, { passive: false });
+    document.addEventListener("gesturechange", stop, { passive: false });
+    document.addEventListener("gestureend", stop, { passive: false });
+    document.addEventListener("touchmove", onTouch, { passive: false });
+    document.addEventListener("wheel", onWheel, { passive: false });
+    document.addEventListener("dblclick", stop, { passive: false });
+    return () => {
+      document.removeEventListener("gesturestart", stop);
+      document.removeEventListener("gesturechange", stop);
+      document.removeEventListener("gestureend", stop);
+      document.removeEventListener("touchmove", onTouch);
+      document.removeEventListener("wheel", onWheel);
+      document.removeEventListener("dblclick", stop);
+    };
+  }, [isAdmin]);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -173,6 +226,7 @@ function RootComponent() {
       <AuthProvider>
         <BetSlipProvider>
           <ConfirmProvider>
+            <AdaptiveViewport />
             <MaintenanceGate>
               <Outlet />
             </MaintenanceGate>
