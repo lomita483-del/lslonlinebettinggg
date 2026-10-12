@@ -29,6 +29,8 @@ export function HomeQuickMenu() {
   const items: Item[] = [
     { to: "/matches", icon: MatchIcon, label: "Matches" },
     { to: "/virtual", icon: Dice5, label: "Virtual" },
+    { to: "/virtual/instant-shooters", icon: Gamepad2, label: "Instant Shooters" },
+    { to: "/virtual/championship-shooter", icon: Trophy, label: "Championship Shooter" },
     { to: "/lottery", icon: Clover, label: "Lottery" },
     { to: "/arcade", icon: Gamepad2, label: "Arcade" },
     { to: "/shop", icon: ShoppingBag, label: "Shop" },
