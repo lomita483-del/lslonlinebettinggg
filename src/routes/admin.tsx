@@ -5393,9 +5393,6 @@ function SettingsPanel() {
     ["hero_tagline", "Homepage tagline", "text"], ["maintenance_message", "Maintenance notice", "textarea"],
     ["closed_message", "Website-closed notice", "textarea"], ["contact_email", "Contact email", "text"],
     ["contact_phone", "Contact phone", "text"], ["contact_whatsapp", "WhatsApp contact", "text"],
-    ["site_logo_url", "Website logo URL", "text"], ["platform_logo_url", "Platform logo URL", "text"],
-    ["platform_logo_auth_url", "Login-page logo URL", "text"], ["platform_logo_voucher_url", "Voucher logo URL", "text"],
-    ["platform_logo_corner_url", "Corner logo URL", "text"], ["platform_og_image_url", "Social sharing image URL", "text"],
     ["terms_content", "Terms and conditions", "textarea"], ["about_us", "About the league", "textarea"],
     ["why_trust_us", "Trust and safety copy", "textarea"], ["ticker_text", "Announcement ticker text", "textarea"],
     ["lottery_intro", "Lottery introduction", "textarea"], ["admin_ai_model", "Admin AI model", "text"],
@@ -5462,7 +5459,21 @@ function SettingsPanel() {
         <p className="text-sm text-muted-foreground">Enable or disable supported features without changing or deleting their records.</p>
         <div className="grid gap-3 md:grid-cols-2">{switches.slice(2).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
       </section>
-      {section("Branding and homepage", "Edit the site's identity and homepage text while keeping Shooters League branding.", ["site_name","platform_name","platform_tagline","platform_description","hero_title","hero_subtitle","hero_tagline","site_logo_url","platform_logo_url","platform_logo_auth_url","platform_logo_voucher_url","platform_logo_corner_url","platform_og_image_url"])}
+      {section("Branding and homepage", "Edit the site's identity and homepage text while keeping Shooters League branding.", ["site_name","platform_name","platform_tagline","platform_description","hero_title","hero_subtitle","hero_tagline"])}
+      <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+        <div>
+          <h3 className="font-bold">Branding images</h3>
+          <p className="text-sm text-muted-foreground">Choose an image from your device, preview and crop it, adjust zoom and crop ratio, or paste a URL. Uploaded images are stored in the existing ads storage bucket. Save Settings to apply the selected image URLs.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <ImageSettingControl label="Website logo" value={settings.site_logo_url} onChange={value => update("site_logo_url", value)} aspect="1 / 1" help="Logo used for the website identity." showFitControls={false} />
+          <ImageSettingControl label="Platform logo" value={settings.platform_logo_url} onChange={value => update("platform_logo_url", value)} aspect="1 / 1" help="Main platform logo." showFitControls={false} />
+          <ImageSettingControl label="Login-page logo" value={settings.platform_logo_auth_url} onChange={value => update("platform_logo_auth_url", value)} aspect="16 / 9" help="Logo or graphic shown on authentication screens." showFitControls={false} />
+          <ImageSettingControl label="Voucher logo" value={settings.platform_logo_voucher_url} onChange={value => update("platform_logo_voucher_url", value)} aspect="16 / 9" help="Branding used on voucher or receipt layouts." showFitControls={false} />
+          <ImageSettingControl label="Corner logo" value={settings.platform_logo_corner_url} onChange={value => update("platform_logo_corner_url", value)} aspect="1 / 1" help="Small corner brand mark." showFitControls={false} />
+          <ImageSettingControl label="Social sharing / Open Graph image" value={settings.platform_og_image_url} onChange={value => update("platform_og_image_url", value)} aspect="1.91 / 1" help="Preview image for social sharing links." showFitControls={false} />
+        </div>
+      </section>
       {section("Contact, legal and announcements", "Update public contact information, legal copy and ticker content.", ["contact_email","contact_phone","contact_whatsapp","terms_content","about_us","why_trust_us","maintenance_message","closed_message","ticker_text","lottery_intro"])}
       {section("Betting and withdrawal limits", "These limits apply to the existing betting system; verify values before saving.", ["min_stake","max_payout","min_withdrawal","min_selections_per_ticket","max_selections_per_ticket","exposure_warn_pct","house_low_balance"])}
       {section("Lottery and rewards", "Configure lottery, spin, login streak, XP and referral rewards.", ["lottery_min_stake","lottery_max_stake","daily_login_base_reward","daily_login_bonus_per_day","daily_login_max_streak","xp_per_bet","xp_per_win","xp_per_login","xp_per_referral","referral_bonus_referrer","referral_bonus_referee","spin_min_reward","spin_max_reward","spin_cooldown_hours","challenge_reward_multiplier","gift_daily_limit","gift_min_amount","gift_max_per_tx","gift_fee_pct"])}
