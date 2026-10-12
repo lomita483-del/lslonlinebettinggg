@@ -157,7 +157,7 @@ function DesktopCanvas({ active, children }: { active: boolean; children: ReactN
     const recompute = () => {
       const w = host.clientWidth;
       if (w <= 0) return;
-      const s = Math.min(w / 1280, 1);
+      const s = Math.min(w / 1280, 1) * (window.innerWidth <= 640 ? 0.85 : 1);
       setScale(s);
       setHeight(inner.offsetHeight * s);
     };
