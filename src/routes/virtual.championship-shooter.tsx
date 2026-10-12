@@ -37,7 +37,7 @@ function ChampionshipPage() {
     const load = async () => {
       const sb = supabase as any;
       // Heartbeat: advance the engine if a stage is due (RPC is idempotent and no-op when not due).
-      try { await sb.rpc("championship_tick"); } catch { /* noop */ }
+      // The LSL database has no championship_tick RPC; do not call an absent function.
       const { data: s } = await sb.from("app_settings").select("virtual_championship_enabled").eq("id", 1).maybeSingle();
       setEnabled(!!s?.virtual_championship_enabled);
       const { data: t } = await sb
