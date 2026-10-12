@@ -1318,3 +1318,9 @@ html.light body {
   scroll-padding-top: 0;
 }
 
+
+/* UI clarity: improve legibility without altering the 1280px layout or page scaling. */
+:root { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button, input, select, textarea { font: inherit; }
+[data-tour='admin-panel'] .text-muted-foreground, [data-tour='admin-hero'] .text-muted-foreground { opacity: 1; }
+[data-tour='admin-panel'] button, [data-tour='admin-panel'] [role='tab'], [data-tour='admin-hero'] { -webkit-font-smoothing: antialiased; }
