@@ -91,6 +91,12 @@ function RegisterPage() {
     nav({ to: "/login" });
   };
 
+  if (signupsAllowed === false) return (
+    <Layout>
+      <div className="container mx-auto px-4 py-16 max-w-xl"><Card className="p-8 text-center border-primary/30 bg-card/70"><h1 className="text-3xl font-black text-primary mb-3">Registration is closed</h1><p className="text-muted-foreground">We’re not accepting new members at the moment, check back later or contact support.</p><p className="mt-5 text-sm">Already a member? <Link to="/login" className="text-primary hover:underline">Sign in</Link></p></Card></div>
+    </Layout>
+  );
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-12 max-w-xl">
