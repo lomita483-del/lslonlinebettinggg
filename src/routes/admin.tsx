@@ -1342,6 +1342,7 @@ function UserSilhouette() {
 function MatchesPanel() {
   const confirm = useConfirm();
   const [matches, setMatches] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState("");
   const [wizard, setWizard] = useState(false);
   const [shooterWizard, setShooterWizard] = useState(false);
   const [tab, setTab] = useState<"live" | "scheduled" | "ended">("scheduled");
@@ -1352,7 +1353,9 @@ function MatchesPanel() {
   const [editingScore, setEditingScore] = useState<any | null>(null);
 
   async function load() {
-    const { data } = await (supabase as any).from("matches").select("*, public_id, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).or("match_kind.is.null,match_kind.neq.future").order("start_time", { ascending: false }).limit(500);
+    const { data, error } = await (supabase as any).from("matches").select("*, public_id, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).or("match_kind.is.null,match_kind.neq.future").order("start_time", { ascending: false }).limit(500);
+    if (error) { setLoadError(error.message); toast.error("Unable to load matches: " + error.message); return; }
+    setLoadError("");
     setMatches(data ?? []);
   }
   useEffect(() => { load(); }, []);
@@ -1510,6 +1513,7 @@ function MatchesPanel() {
 
   return (
     <div className="space-y-4">
+      {loadError && <div role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">Matches failed to load: {loadError} <Button size="sm" variant="outline" onClick={() => void load()}>Retry</Button></div>}
       <ArenaImageSettings />
       <div className="match-toolbar">
         <button type="button" className="match-tool-btn" onClick={() => setWizard(true)}><Plus className="h-4 w-4" />New Match (Wizard)</button>
