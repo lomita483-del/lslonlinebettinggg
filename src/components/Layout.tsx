@@ -227,7 +227,8 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen isolate bg-background">
+      {!siteBg && <div aria-hidden="true" className="lsl-atmosphere pointer-events-none fixed inset-0" />}
       {siteBg && (
         <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <img
