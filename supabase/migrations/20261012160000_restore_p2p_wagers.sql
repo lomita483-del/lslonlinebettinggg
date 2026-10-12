@@ -2,8 +2,6 @@
 
 -- This migration creates separate wager escrow wallets; it does not alter existing profile token balances or betting wallets.
 
-BEGIN;
-
 -- ============================================================================
 -- P2P WAGER SYSTEM
 -- ============================================================================
@@ -596,6 +594,4 @@ CREATE POLICY "dispute members and admins can post messages"
       )
     )
   );
-
-COMMIT;
 

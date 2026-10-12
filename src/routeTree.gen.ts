@@ -343,7 +343,8 @@ export interface FileRoutesByFullPath {
   '/referrals': typeof ReferralsRoute
   '/wagers/$id': typeof WagersIdRoute
   '/wagers/': typeof WagersIndexRoute
-}export interface FileRoutesByTo {
+}
+export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
@@ -391,7 +392,8 @@ export interface FileRoutesByFullPath {
   '/referrals': typeof ReferralsRoute
   '/wagers/$id': typeof WagersIdRoute
   '/wagers': typeof WagersIndexRoute
-}export interface FileRoutesById {
+}
+export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
@@ -440,7 +442,8 @@ export interface FileRoutesByFullPath {
   '/referrals': typeof ReferralsRoute
   '/wagers/$id': typeof WagersIdRoute
   '/wagers/': typeof WagersIndexRoute
-}export interface FileRouteTypes {
+}
+export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
@@ -636,7 +639,9 @@ export interface RootRouteChildren {
   ReferralsRoute: typeof ReferralsRoute
   WagersIndexRoute: typeof WagersIndexRoute
   WagersIdRoute: typeof WagersIdRoute
-}declare module '@tanstack/react-router' {
+}
+
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/withdraw': {
       id: '/withdraw'
@@ -968,7 +973,9 @@ export interface RootRouteChildren {
       parentRoute: typeof rootRouteImport
     }
   }
-}interface MatchesRouteChildren {
+}
+
+interface MatchesRouteChildren {
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
 }
 
@@ -1037,7 +1044,8 @@ const rootRouteChildren: RootRouteChildren = {
   ReferralsRoute: ReferralsRoute,
   WagersIndexRoute: WagersIndexRoute,
   WagersIdRoute: WagersIdRoute,
-}export const routeTree = rootRouteImport
+}
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
