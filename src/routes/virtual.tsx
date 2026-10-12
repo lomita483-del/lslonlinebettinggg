@@ -47,7 +47,7 @@ type Flags = {
 function VirtualHubPage() {
   const [flags, setFlags] = useState<Flags>({});
   const [liveInstant, setLiveInstant] = useState(0);
-  const [nextChamp, setNextChamp] = useState<{ starts_at: string | null; status: string | null } | null>(null);
+  const [nextChamp, setNextChamp] = useState<{ next_stage_at: string | null; status: string | null } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -65,10 +65,10 @@ function VirtualHubPage() {
           .eq("status", "live"),
         sb
           .from("tournaments")
-          .select("starts_at,status")
+          .select("next_stage_at,status")
           .eq("kind", "championship_virtual")
-          .in("status", ["scheduled", "live"])
-          .order("starts_at", { ascending: true })
+          .in("status", ["scheduled", "live", "booking"])
+          .order("next_stage_at", { ascending: true })
           .limit(1)
           .maybeSingle(),
       ]);
@@ -124,9 +124,9 @@ function VirtualHubPage() {
               closedLabel="Closed by admin"
               cta="View bracket"
               extra={
-                nextChamp?.starts_at ? (
+                nextChamp?.next_stage_at ? (
                   <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300">
-                    Next: {new Date(nextChamp.starts_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    Next: {new Date(nextChamp.next_stage_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </span>
                 ) : null
               }
