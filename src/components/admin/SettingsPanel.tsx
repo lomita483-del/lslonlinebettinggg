@@ -107,7 +107,16 @@ export function SettingsPanel() {
     ];
     const patch: Settings = {};
     for (const key of keys) if (key in settings) patch[key] = settings[key];
-    const { error } = await (supabase as any).from("app_settings").update(patch).eq("id", 1);
+    let { error } = await (supabase as any).from("app_settings").update(patch).eq("id", 1);
+    // Some deployed databases have not yet applied the contact_discord migration.
+    // Retry the rest of the settings so one missing optional column cannot block every setting.
+    let skippedDiscord = false;
+    if (error && /contact_discord/i.test(error.message) && /column|schema cache|does not exist/i.test(error.message)) {
+      const { contact_discord: _unsupportedDiscord, ...compatiblePatch } = patch;
+      const retry = await (supabase as any).from("app_settings").update(compatiblePatch).eq("id", 1);
+      error = retry.error;
+      skippedDiscord = !error;
+    }
     if (error) {
       setBusy(false);
       toast.error("Settings were not saved: " + error.message);
@@ -118,7 +127,7 @@ export function SettingsPanel() {
     } catch { /* Audit RPC may not exist in every deployment; settings save remains authoritative. */ }
     setBusy(false);
     setDirty(false);
-    toast.success("Settings saved");
+    toast.success(skippedDiscord ? "Settings saved, but Discord contact could not be saved because the database migration is pending." : "Settings saved");
   }
 
   if (!settings) return <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">Loading admin settings…</div>;
