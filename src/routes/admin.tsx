@@ -3900,28 +3900,60 @@ const QA_PALETTE = [
 ];
 
 function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string) => void; actions?: typeof QUICK_ACTIONS }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const actions = [...(actionsProp ?? QUICK_ACTIONS)].sort((a, b) => a.l.localeCompare(b.l));
+  const filtered = actions.filter(a => a.l.toLowerCase().includes(query.trim().toLowerCase()));
+  const choose = (tab: string) => {
+    setOpen(false);
+    setQuery("");
+    onOpen(tab);
+  };
   return (
-    <Card className="border-primary/20 bg-card/60 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary">Quick Actions</div>
-        <div className="text-[7px] sm:text-[9px] text-muted-foreground uppercase tracking-widest">Scroll for more →</div>
-      </div>
-      {/* Fixed at 4 rows tall; extra actions flow into new columns you scroll to horizontally. */}
-      <div className="overflow-x-auto pb-1 -mb-1">
-        <div className="grid grid-rows-4 grid-flow-col auto-cols-[76px] sm:auto-cols-[92px] gap-1.5 sm:gap-2 w-max">
-          {actions.map((q, idx) => {
-            const c = QA_PALETTE[idx % QA_PALETTE.length];
-            return (
-              <button key={q.l} onClick={() => onOpen(q.t)} className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border bg-background/40 active:scale-95 transition min-h-[54px] ${c.bd}`}>
-                <q.i className={`h-4 w-4 ${c.ic}`} />
-                <span className="text-[7px] sm:text-[9px] text-foreground text-center leading-tight font-semibold">{q.l}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </Card>
+    <>
+      <Card className="border-primary/20 bg-card/60 p-3">
+        <button type="button" onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 p-3 text-left transition hover:bg-primary/20">
+          <span className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/20 text-primary"><Gamepad2 className="h-5 w-5" /></span>
+            <span><span className="block text-sm font-black text-primary">Quick Action</span>
+              <span className="block text-[10px] text-muted-foreground">Open all {actions.length} admin tools</span></span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-primary" />
+        </button>
+      </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-[min(96vw,520px)] max-w-none max-h-[92dvh] overflow-hidden rounded-[2rem] border-4 border-slate-800 bg-gradient-to-b from-indigo-950 via-violet-900 to-orange-600 p-0 text-white shadow-2xl [&>button]:hidden">
+          <div className="flex items-center justify-between gap-2 border-b border-white/20 px-5 py-4">
+            <div>
+              <DialogTitle className="text-lg font-black text-white">Quick Action</DialogTitle>
+              <p className="text-xs text-white/75">Admin command center · {actions.length} tools</p>
+            </div>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900">✕ Close</button>
+          </div>
+          <div className="px-5 pt-3">
+            <Input value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Search admin tools…" aria-label="Search quick actions"
+              className="border-white/30 bg-black/25 text-white placeholder:text-white/60" />
+          </div>
+          <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-7 pt-4" style={{ maxHeight: "calc(92dvh - 145px)" }}>
+            {filtered.length === 0 ? <p className="py-8 text-center text-sm text-white/80">No matching actions.</p> :
+            <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4">
+              {filtered.map((action, index) => {
+                const colors = ["from-pink-500 to-rose-600", "from-indigo-400 to-blue-700", "from-emerald-400 to-green-700", "from-amber-400 to-orange-600", "from-violet-400 to-purple-700", "from-cyan-400 to-sky-700"];
+                return <button key={action.t} type="button" onClick={() => choose(action.t)}
+                  className="group flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                  <span className={`grid aspect-square w-full max-w-[76px] place-items-center rounded-[20px] bg-gradient-to-br ${colors[index % colors.length]} shadow-lg ring-1 ring-white/20 transition group-active:scale-95`}>
+                    <action.i className="h-8 w-8 text-white drop-shadow-md" />
+                  </span>
+                  <span className="min-h-[2em] text-[11px] font-medium leading-tight text-white">{action.l}</span>
+                </button>;
+              })}
+            </div>}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
