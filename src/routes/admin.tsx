@@ -5334,7 +5334,9 @@ function SettingsPanel() {
     "contact_email", "contact_phone", "contact_whatsapp", "terms_content", "about_us",
     "why_trust_us", "site_name", "platform_name", "platform_tagline", "platform_description",
     "site_logo_url", "platform_logo_url", "platform_logo_auth_url", "platform_logo_voucher_url",
-    "platform_logo_corner_url", "platform_og_image_url", "hero_title", "hero_subtitle", "hero_tagline",
+    "platform_logo_corner_url", "platform_og_image_url", "site_bg_url", "site_bg_fit", "site_bg_position",
+    "hero_bg_url", "hero_bg_fit", "hero_bg_position", "admin_hero_url", "admin_hero_fit", "admin_hero_position",
+    "nav_bg_url", "nav_bg_fit", "nav_bg_position", "hero_title", "hero_subtitle", "hero_tagline",
     "min_stake", "max_payout", "min_withdrawal",
     "lottery_enabled", "lottery_min_stake", "lottery_max_stake", "lottery_intro",
     "ticker_enabled", "ticker_text", "ticker_speed", "shop_enabled",
@@ -5462,6 +5464,29 @@ function SettingsPanel() {
         <div className="grid gap-3 md:grid-cols-2">{switches.slice(4).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
       </section>
       {section("Branding and homepage", "Edit the site's identity and homepage text while keeping Shooters League branding.", ["site_name","platform_name","platform_tagline","platform_description","hero_title","hero_subtitle","hero_tagline"])}
+      <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+        <div><h3 className="font-bold">Backgrounds &amp; appearance</h3><p className="text-sm text-muted-foreground">Upload/crop or paste URLs for the site background, home hero, administrator welcome banner, and sticky navigation. Save Settings to apply.</p></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <ImageSettingControl label="Site background (all pages)" value={settings.site_bg_url} onChange={value => update("site_bg_url", value)} aspect="16 / 9" help="Full-screen backdrop behind page content." />
+          <ImageSettingControl label="Home page hero background" value={settings.hero_bg_url} onChange={value => update("hero_bg_url", value)} aspect="16 / 9" help="Backdrop behind the homepage hero headline." />
+          <ImageSettingControl label="Admin welcome banner image / GIF" value={settings.admin_hero_url} onChange={value => update("admin_hero_url", value)} aspect="16 / 9" help="Backdrop behind the Welcome Administrator banner." />
+          <ImageSettingControl label="Top navigation bar background" value={settings.nav_bg_url} onChange={value => update("nav_bg_url", value)} aspect="16 / 9" help="Background image for the sticky top navigation." />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {([
+            ["site_bg_fit", "Site background crop", ["cover", "contain", "stretch"]],
+            ["hero_bg_fit", "Home hero crop", ["cover", "contain", "stretch"]],
+            ["admin_hero_fit", "Admin banner crop", ["cover", "contain", "stretch"]],
+            ["nav_bg_fit", "Navigation crop", ["cover", "contain", "stretch"]],
+          ] as [string, string, string[]][]).map(([key, label, options]) => <label key={key} className="block space-y-1"><span className="text-sm font-medium">{label}</span><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={settings[key] ?? "cover"} onChange={event => update(key, event.target.value)}>{options.map(option => <option key={option} value={option}>{option === "stretch" ? "Stretch to fill" : option === "cover" ? "Cover (fill & crop)" : "Contain (fit)"}</option>)}</select></label>)}
+          {([
+            ["site_bg_position", "Site background position"],
+            ["hero_bg_position", "Home hero position"],
+            ["admin_hero_position", "Admin banner position"],
+            ["nav_bg_position", "Navigation position"],
+          ] as [string, string][]).map(([key, label]) => <label key={key} className="block space-y-1"><span className="text-sm font-medium">{label}</span><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={settings[key] ?? "center"} onChange={event => update(key, event.target.value)}>{["center","center top","center bottom","left center","right center","center right"].map(option => <option key={option} value={option}>{option}</option>)}</select></label>)}
+        </div>
+      </section>
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
         <div>
           <h3 className="font-bold">Branding images</h3>
