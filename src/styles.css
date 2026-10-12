@@ -1359,26 +1359,4 @@ html.light body {
 }
 
 
-/* Site-wide atmospheric background: layered emerald/gold lighting over pitch black.
-   Only rendered by Layout when no admin-uploaded background is configured. */
-.lsl-atmosphere {
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 68% 42% at 8% 9%, oklch(0.50 0.16 156 / 0.14), transparent 76%),
-    radial-gradient(ellipse 55% 45% at 93% 12%, oklch(0.77 0.17 87 / 0.11), transparent 77%),
-    radial-gradient(ellipse 66% 48% at 50% 90%, oklch(0.37 0.11 165 / 0.12), transparent 80%),
-    linear-gradient(160deg, #07080a 0%, #0b1111 48%, #07080a 100%);
-}
-.lsl-atmosphere::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.18;
-  background-image: linear-gradient(oklch(0.75 0.09 90 / 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(0.75 0.09 90 / 0.12) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: linear-gradient(to bottom, transparent, black 30%, transparent 90%);
-}
-@media (max-width: 640px) {
-  .lsl-atmosphere::after { opacity: 0.10; background-size: 42px 42px; }
-}
+
