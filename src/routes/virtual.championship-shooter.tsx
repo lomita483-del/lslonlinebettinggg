@@ -22,10 +22,10 @@ export const Route = createFileRoute("/virtual/championship-shooter")({
 });
 
 type Tournament = {
-  id: string; name: string | null; starts_at: string | null; status: string | null;
+  id: string; name: string | null; next_stage_at: string | null; status: string | null;
   current_stage: string | null; next_stage_at: string | null; team_ids: string[] | null;
   champion_team_id: string | null;
-  booking_closes_at: string | null; stage_live_ends_at: string | null;
+  next_stage_at: string | null; next_stage_at: string | null;
 };
 
 function ChampionshipPage() {
@@ -42,10 +42,10 @@ function ChampionshipPage() {
       setEnabled(!!s?.virtual_championship_enabled);
       const { data: t } = await sb
         .from("tournaments")
-        .select("id,name,starts_at,status,current_stage,next_stage_at,team_ids,champion_team_id,booking_closes_at,stage_live_ends_at")
+        .select("id,name,status,current_stage,next_stage_at,team_ids,champion_team_id")
         .eq("kind", "championship_virtual")
         .in("status", ["scheduled", "booking", "live", "completed"])
-        .order("starts_at", { ascending: false })
+        .order("next_stage_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       setActive((t ?? null) as Tournament | null);
@@ -76,7 +76,7 @@ function ChampionshipPage() {
             accent="from-amber-500/40 via-amber-600/10"
             statusLabel={statusBadge(enabled, active)}
             statusTone={statusTone(enabled, active)}
-            nextAt={active?.starts_at ?? null}
+            nextAt={active?.next_stage_at ?? null}
             countdown={active && active.status !== "scheduled" ? { mm, ss, label } : null}
           />
 
@@ -95,7 +95,7 @@ function ChampionshipPage() {
               <div className="text-[10px] uppercase tracking-[0.35em] text-amber-300 mb-2">Next tournament kicks off in</div>
               <div className="text-6xl sm:text-7xl font-black gradient-gold-text tabular-nums leading-none">{mm}:{ss}</div>
               <div className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
-                <Clock className="h-3 w-3" /> {active.starts_at ? new Date(active.starts_at).toLocaleString() : ""}
+                <Clock className="h-3 w-3" /> {active.next_stage_at ? new Date(active.next_stage_at).toLocaleString() : ""}
               </div>
               <div className="mt-6 text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
                 Lock your picks in: outright champion, stage reachers (Final / Semi / Quarter), per-match winners, and stage eliminations.
@@ -203,17 +203,17 @@ export function ArenaHeader({
 
 function pickTarget(active: Tournament | null): { targetAt: number | null; label: string } {
   if (!active) return { targetAt: null, label: "" };
-  if (active.status === "booking" && active.booking_closes_at) {
-    return { targetAt: new Date(active.booking_closes_at).getTime(), label: "Booking closes in" };
+  if (active.status === "booking" && active.next_stage_at) {
+    return { targetAt: new Date(active.next_stage_at).getTime(), label: "Booking closes in" };
   }
-  if (active.status === "live" && active.stage_live_ends_at) {
-    return { targetAt: new Date(active.stage_live_ends_at).getTime(), label: "Stage ends in" };
+  if (active.status === "live" && active.next_stage_at) {
+    return { targetAt: new Date(active.next_stage_at).getTime(), label: "Stage ends in" };
   }
   if (active.status === "live" && active.next_stage_at) {
     return { targetAt: new Date(active.next_stage_at).getTime(), label: "Next stage in" };
   }
-  if (active.starts_at) {
-    return { targetAt: new Date(active.starts_at).getTime(), label: "Starts in" };
+  if (active.next_stage_at) {
+    return { targetAt: new Date(active.next_stage_at).getTime(), label: "Starts in" };
   }
   return { targetAt: null, label: "" };
 }
