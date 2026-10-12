@@ -191,7 +191,7 @@ export function AdminPage() {
 
   return (
     <Layout>
-      <main className={`admin-console-page${unblurred ? " admin-unblurred" : ""} w-full overflow-x-hidden`}>
+      <main className={`admin-console-page${unblurred ? " admin-unblurred" : ""} w-full overflow-x-clip overflow-y-visible`}>
         <div className="admin-shell-logo" style={{ backgroundImage: `url(${lslLogo})` }} aria-hidden="true" />
         <div className="w-[1280px] max-w-[1280px] ml-0 mr-auto px-4 py-6 space-y-4">
 
