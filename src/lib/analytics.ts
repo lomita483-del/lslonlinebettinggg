@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CONSENT_KEY = "lsl-cookie-consent-v1";
-const SESSION_KEY = "ecb-analytics-session";
+const SESSION_KEY = "lsl-analytics-session";
 
 export function hasCookieConsent(): boolean {
   if (typeof window === "undefined") return false;
