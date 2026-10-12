@@ -5225,3 +5225,65 @@ function WithdrawalsPanel() {
     </Card>
   );
 }
+
+
+function AdminDataTable({ title, table, columns }: { title: string; table: string; columns: string[] }) {
+  const [rows, setRows] = useState<Record<string, any>[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(true);
+  useEffect(() => {
+    let active = true;
+    (supabase.from(table as any).select("*").limit(100) as any).then(({ data, error }: any) => {
+      if (!active) return;
+      setRows(data ?? []);
+      setError(error?.message ?? null);
+      setBusy(false);
+    });
+    return () => { active = false; };
+  }, [table]);
+  return <Card className="p-4 space-y-3">
+    <h3 className="text-lg font-bold">{title}</h3>
+    {busy ? <p>Loading…</p> : error ? <p role="alert" className="text-destructive">{error}</p> : rows.length === 0 ? <p>No records found.</p> :
+    <div className="overflow-x-auto"><table className="w-full text-sm text-left">
+      <thead><tr>{columns.map(c => <th key={c} className="p-2 border-b">{c.replace(/_/g, " ")}</th>)}</tr></thead>
+      <tbody>{rows.map((row, i) => <tr key={String(row.id ?? i)}>{columns.map(c => <td key={c} className="p-2 border-b">{row[c] == null ? "—" : typeof row[c] === "object" ? JSON.stringify(row[c]) : String(row[c])}</td>)}</tr>)}</tbody>
+    </table></div>}
+  </Card>;
+}
+
+function LeaderboardAdminPanel() {
+  const [rows, setRows] = useState<LbRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    loadStandings().then(({ shooters }) => { if (active) setRows(shooters); }).catch((e) => { if (active) setError(String(e)); });
+    return () => { active = false; };
+  }, []);
+  return <Card className="p-4 space-y-3"><h3 className="text-lg font-bold">Leaderboard</h3>
+    {error ? <p role="alert">{error}</p> : rows.length === 0 ? <p>No leaderboard entries yet.</p> :
+    <div className="space-y-2">{rows.slice(0, 100).map((row, i) => <div key={i} className="flex justify-between border-b p-2"><span>#{i + 1}</span><span>{String((row as any).name ?? (row as any).username ?? (row as any).display_name ?? "Shooter")}</span><span>{String((row as any).points ?? (row as any).score ?? "")}</span></div>)}</div>}
+  </Card>;
+}
+
+function BetTrackerPanel() {
+  return <AdminDataTable title="Bet Tracker" table="bets" columns={["id", "user_id", "amount", "status", "created_at"]} />;
+}
+
+function SettingsPanel() {
+  return <AdminDataTable title="Application Settings (read-only)" table="app_settings" columns={["id", "updated_at"]} />;
+}
+
+function AttendancePanel() {
+  return <AdminDataTable title="Attendance" table="tournament_participants" columns={["id", "tournament_id", "user_id", "created_at"]} />;
+}
+
+function LiveScoreEditor({ m, onSave }: { m: any; onSave: (home: number, away: number) => void | Promise<void> }) {
+  const [home, setHome] = useState(String(m.home_score ?? 0));
+  const [away, setAway] = useState(String(m.away_score ?? 0));
+  return <div className="flex items-center gap-2">
+    <Input aria-label="Home score" type="number" min="0" className="w-16" value={home} onChange={e => setHome(e.target.value)} />
+    <span>–</span>
+    <Input aria-label="Away score" type="number" min="0" className="w-16" value={away} onChange={e => setAway(e.target.value)} />
+    <Button size="sm" onClick={() => { const h = Number(home), a = Number(away); if (Number.isInteger(h) && Number.isInteger(a) && h >= 0 && a >= 0) void onSave(h, a); }}>Save</Button>
+  </div>;
+}
