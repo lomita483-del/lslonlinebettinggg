@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,12 +40,24 @@ function RegisterPage() {
     referral_code: "",
   });
   const [accepted, setAccepted] = useState(false);
+  const [signupsAllowed, setSignupsAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    supabase.from("app_settings").select("allow_signups").eq("id", 1).maybeSingle()
+      .then(({ data, error }) => { if (alive) setSignupsAllowed(error ? true : (data as any)?.allow_signups !== false); });
+    const channel = supabase.channel("registration-settings")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.1" }, (payload: any) => {
+        setSignupsAllowed(payload.new?.allow_signups !== false);
+      }).subscribe();
+    return () => { alive = false; void supabase.removeChannel(channel); };
+  }, []);
   const [loading, setLoading] = useState(false);
 
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (signupsAllowed === false) return toast.error("We are not accepting new members at the moment, check back later or contact support");
     if (!accepted) return toast.error("You must accept the terms");
     if (!f.ingame_name.trim()) return toast.error("In-game full name is required");
     if (!f.discord_full_name.trim()) return toast.error("Discord full name is required");
