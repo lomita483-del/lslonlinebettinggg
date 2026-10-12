@@ -5183,3 +5183,45 @@ function TokenMovementPanel() {
     </div>
   );
 }
+
+
+function WithdrawalsPanel() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.from("withdrawal_requests").select("*").order("created_at", { ascending: false }).limit(100)
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        setRequests(data ?? []);
+        setErrorMessage(error?.message ?? null);
+        setLoadingRequests(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  return (
+    <Card className="p-4 space-y-4">
+      <h3 className="font-bold text-lg">Withdrawal Requests</h3>
+      {loadingRequests ? <p>Loading withdrawals…</p> : errorMessage ? (
+        <p role="alert" className="text-destructive">Unable to load withdrawals: {errorMessage}</p>
+      ) : requests.length === 0 ? <p className="text-muted-foreground">No withdrawal requests found.</p> : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead><tr className="border-b"><th className="p-2">Request</th><th className="p-2">Amount</th><th className="p-2">Status</th><th className="p-2">Submitted</th></tr></thead>
+            <tbody>{requests.map((request) => (
+              <tr key={String(request.id)} className="border-b">
+                <td className="p-2 font-mono">{String(request.id).slice(0, 12)}</td>
+                <td className="p-2">{String(request.amount ?? request.tokens ?? "—")}</td>
+                <td className="p-2">{String(request.status ?? "—")}</td>
+                <td className="p-2">{request.created_at ? new Date(request.created_at).toLocaleString() : "—"}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
