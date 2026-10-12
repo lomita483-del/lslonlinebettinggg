@@ -3902,6 +3902,10 @@ const QA_PALETTE = [
 function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string) => void; actions?: typeof QUICK_ACTIONS }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // Only the Quick Action dialog compensates for the phone desktop-width viewport.
+  const phoneWidth = typeof window !== "undefined" && Math.min(window.screen.width, window.screen.height) <= 767 ? window.screen.width : 0;
+  const phoneHeight = typeof window !== "undefined" ? window.screen.height : 0;
+  const quickActionZoom = phoneWidth && typeof window !== "undefined" ? Math.max(1, window.innerWidth / phoneWidth) : 1;
   const actions = [...(actionsProp ?? QUICK_ACTIONS)].sort((a, b) => a.l.localeCompare(b.l));
   const filtered = actions.filter(a => a.l.toLowerCase().includes(query.trim().toLowerCase()));
   const choose = (tab: string) => {
@@ -3923,7 +3927,7 @@ function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string)
         </button>
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="fixed !left-1/2 !top-auto !bottom-[max(20px,env(safe-area-inset-bottom))] !-translate-x-1/2 !translate-y-0 w-[min(94vw,480px)] max-w-none h-[min(84dvh,760px)] max-h-[calc(100dvh-52px)] flex flex-col overflow-hidden rounded-[2rem] border border-primary/40 bg-card p-0 text-card-foreground shadow-2xl [&>button]:hidden">
+        <DialogContent style={phoneWidth ? { zoom: quickActionZoom, width: `${Math.min(phoneWidth * 0.92, 440)}px`, height: `${Math.min(phoneHeight * 0.78, 680)}px`, maxHeight: `${Math.max(240, phoneHeight - 52)}px` } : undefined} className="fixed !left-1/2 !top-auto !bottom-[max(20px,env(safe-area-inset-bottom))] !-translate-x-1/2 !translate-y-0 w-[min(94vw,480px)] max-w-none h-[min(84dvh,760px)] max-h-[calc(100dvh-52px)] flex flex-col overflow-hidden rounded-[2rem] border border-primary/40 bg-card p-0 text-card-foreground shadow-2xl [&>button]:hidden">
           <div className="flex items-center justify-between gap-2 shrink-0 border-b border-border px-4 py-3">
             <div>
               <DialogTitle className="text-base font-black text-primary">Quick Action</DialogTitle>
