@@ -5326,32 +5326,151 @@ function SettingsPanel() {
   const [settings, setSettings] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Only columns confirmed to exist in this Lomita Shooters League app_settings table.
+  const settingsColumns = [
+    "maintenance_mode", "maintenance_message", "closed_mode", "closed_message",
+    "contact_email", "contact_phone", "contact_whatsapp", "terms_content", "about_us",
+    "why_trust_us", "site_name", "platform_name", "platform_tagline", "platform_description",
+    "site_logo_url", "platform_logo_url", "platform_logo_auth_url", "platform_logo_voucher_url",
+    "platform_logo_corner_url", "platform_og_image_url", "hero_title", "hero_subtitle", "hero_tagline",
+    "min_stake", "max_payout", "min_withdrawal",
+    "lottery_enabled", "lottery_min_stake", "lottery_max_stake", "lottery_intro",
+    "ticker_enabled", "ticker_text", "ticker_speed", "shop_enabled",
+    "spin_enabled", "spin_min_reward", "spin_max_reward", "spin_cooldown_hours",
+    "gift_enabled", "gift_daily_limit", "gift_min_amount", "gift_max_per_tx", "gift_fee_pct",
+    "friends_enabled", "vip_enabled", "admin_ai_enabled", "admin_ai_model",
+    "exposure_warn_pct", "house_low_balance", "min_selections_per_ticket", "max_selections_per_ticket",
+    "daily_login_enabled", "daily_login_base_reward", "daily_login_bonus_per_day", "daily_login_max_streak",
+    "xp_per_bet", "xp_per_win", "xp_per_login", "xp_per_referral",
+    "referral_bonus_referrer", "referral_bonus_referee", "challenge_reward_multiplier",
+    "virtual_payout_multiplier", "virtual_min_stake", "virtual_max_stake",
+    "virtual_xp_per_win", "virtual_win_bonus_tokens", "virtual_cycle_running",
+    "virtual_round_duration_seconds", "virtual_animation_seconds", "virtual_max_score",
+    "virtual_concurrent_rounds", "virtual_max_payout", "virtual_min_selections",
+    "virtual_max_selections", "virtual_lock_window_seconds", "virtual_matches_per_round",
+    "allow_rebet", "futures_repeat_tickets_enabled"
+  ] as const;
+
   const load = async () => {
-    const result = await (supabase as any).from("app_settings").select("maintenance_mode,maintenance_message,closed_mode,closed_message,contact_email,contact_phone,contact_whatsapp,hero_tagline,hero_title,hero_subtitle,site_name,min_stake,max_payout").eq("id", 1).maybeSingle();
+    setError("");
+    const result = await (supabase as any).from("app_settings").select(settingsColumns.join(",")).eq("id", 1).maybeSingle();
     if (result.error) setError(result.error.message);
+    else if (!result.data) setError("The app_settings row (id = 1) was not found.");
     else { setError(""); setSettings(result.data); }
   };
   useEffect(() => { void load(); }, []);
+
   const save = async () => {
+    if (!settings) return;
     setBusy(true);
-    const { data, error: err } = await (supabase as any).from("app_settings").update(settings).eq("id", 1).select("id");
+    setError("");
+    const patch = Object.fromEntries(settingsColumns.map((key) => [key, settings[key]]));
+    const { data, error: err } = await (supabase as any).from("app_settings").update(patch).eq("id", 1).select("id");
     setBusy(false);
-    if (err || !data?.length) toast.error(err?.message || "Settings update was not permitted");
-    else toast.success("Settings saved successfully");
+    if (err || !data?.length) {
+      const message = err?.message || "Settings update was not permitted. Check the current admin permissions.";
+      setError(message);
+      toast.error("Could not save settings", { description: message });
+    } else toast.success("Settings saved successfully");
   };
-  return <Card className="admin-panel space-y-5 border-primary/40 bg-card/95 p-6 shadow-[0_0_30px_hsl(var(--primary)/0.14)]">
-    <div className="admin-command-header rounded-xl border border-primary/30 bg-gradient-to-r from-primary/20 via-card to-card p-4"><h2 className="admin-command-name text-2xl font-black tracking-wide text-primary">Website Settings</h2><p className="text-sm text-foreground/80">Lomita Shooters · Administration Command Centre</p></div>
-    <p className="admin-panel-subtitle text-sm text-muted-foreground">Edit live application settings. Changes are saved only when you press Save.</p>
-    {error && <p role="alert" className="text-destructive">{error}</p>}
-    {!settings && !error && <p>Loading settings…</p>}
+
+  const update = (key: string, value: any) => setSettings((current: any) => ({ ...current, [key]: value }));
+  const switches: [string, string][] = [
+    ["maintenance_mode", "Maintenance mode"], ["closed_mode", "Temporarily close the website"],
+    ["lottery_enabled", "Enable lottery"], ["ticker_enabled", "Enable announcement ticker"],
+    ["shop_enabled", "Enable shop"], ["spin_enabled", "Enable spin rewards"],
+    ["gift_enabled", "Enable player gifts"], ["friends_enabled", "Enable friends"],
+    ["vip_enabled", "Enable VIP features"], ["admin_ai_enabled", "Enable admin AI tools"],
+    ["daily_login_enabled", "Enable daily login rewards"], ["allow_rebet", "Allow repeat bets"],
+    ["futures_repeat_tickets_enabled", "Allow repeat futures tickets"],
+    ["virtual_cycle_running", "Run virtual match cycles"],
+  ];
+  const fields: [string, string, "text" | "number" | "textarea"][] = [
+    ["site_name", "Website name", "text"], ["platform_name", "Platform name", "text"],
+    ["platform_tagline", "Platform tagline", "text"], ["platform_description", "Platform description", "textarea"],
+    ["hero_title", "Homepage headline", "text"], ["hero_subtitle", "Homepage subtitle", "textarea"],
+    ["hero_tagline", "Homepage tagline", "text"], ["maintenance_message", "Maintenance notice", "textarea"],
+    ["closed_message", "Website-closed notice", "textarea"], ["contact_email", "Contact email", "text"],
+    ["contact_phone", "Contact phone", "text"], ["contact_whatsapp", "WhatsApp contact", "text"],
+    ["site_logo_url", "Website logo URL", "text"], ["platform_logo_url", "Platform logo URL", "text"],
+    ["platform_logo_auth_url", "Login-page logo URL", "text"], ["platform_logo_voucher_url", "Voucher logo URL", "text"],
+    ["platform_logo_corner_url", "Corner logo URL", "text"], ["platform_og_image_url", "Social sharing image URL", "text"],
+    ["terms_content", "Terms and conditions", "textarea"], ["about_us", "About the league", "textarea"],
+    ["why_trust_us", "Trust and safety copy", "textarea"], ["ticker_text", "Announcement ticker text", "textarea"],
+    ["lottery_intro", "Lottery introduction", "textarea"], ["admin_ai_model", "Admin AI model", "text"],
+    ["min_stake", "Minimum stake (tokens)", "number"], ["max_payout", "Maximum payout (tokens)", "number"],
+    ["min_withdrawal", "Minimum withdrawal (tokens)", "number"],
+    ["lottery_min_stake", "Lottery minimum stake", "number"], ["lottery_max_stake", "Lottery maximum stake", "number"],
+    ["ticker_speed", "Ticker speed", "number"], ["spin_min_reward", "Spin minimum reward", "number"],
+    ["spin_max_reward", "Spin maximum reward", "number"], ["spin_cooldown_hours", "Spin cooldown (hours)", "number"],
+    ["gift_daily_limit", "Daily gift limit", "number"], ["gift_min_amount", "Minimum gift", "number"],
+    ["gift_max_per_tx", "Maximum gift per transaction", "number"], ["gift_fee_pct", "Gift fee (%)", "number"],
+    ["exposure_warn_pct", "Exposure warning (%)", "number"], ["house_low_balance", "Low house balance warning", "number"],
+    ["min_selections_per_ticket", "Minimum selections per ticket", "number"],
+    ["max_selections_per_ticket", "Maximum selections per ticket", "number"],
+    ["daily_login_base_reward", "Daily login base reward", "number"],
+    ["daily_login_bonus_per_day", "Daily streak bonus per day", "number"],
+    ["daily_login_max_streak", "Daily login streak cap", "number"],
+    ["xp_per_bet", "XP per bet", "number"], ["xp_per_win", "XP per win", "number"],
+    ["xp_per_login", "XP per login", "number"], ["xp_per_referral", "XP per referral", "number"],
+    ["referral_bonus_referrer", "Referrer bonus", "number"], ["referral_bonus_referee", "New player referral bonus", "number"],
+    ["challenge_reward_multiplier", "Challenge reward multiplier", "number"],
+    ["virtual_payout_multiplier", "Virtual payout multiplier", "number"],
+    ["virtual_min_stake", "Virtual minimum stake", "number"], ["virtual_max_stake", "Virtual maximum stake", "number"],
+    ["virtual_xp_per_win", "Virtual XP per win", "number"], ["virtual_win_bonus_tokens", "Virtual win bonus tokens", "number"],
+    ["virtual_round_duration_seconds", "Virtual round duration (seconds)", "number"],
+    ["virtual_animation_seconds", "Virtual animation duration (seconds)", "number"],
+    ["virtual_max_score", "Virtual maximum score", "number"], ["virtual_concurrent_rounds", "Concurrent virtual rounds", "number"],
+    ["virtual_max_payout", "Virtual maximum payout", "number"], ["virtual_min_selections", "Virtual minimum selections", "number"],
+    ["virtual_max_selections", "Virtual maximum selections", "number"],
+    ["virtual_lock_window_seconds", "Virtual bet lock window (seconds)", "number"],
+    ["virtual_matches_per_round", "Matches per virtual round", "number"],
+  ];
+
+  const section = (title: string, description: string, keys: string[]) => (
+    <section key={title} className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+      <div><h3 className="font-bold">{title}</h3><p className="text-sm text-muted-foreground">{description}</p></div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {fields.filter(([key]) => keys.includes(key)).map(([key, label, type]) => (
+          <label key={key} className={`block space-y-1 ${type === "textarea" ? "md:col-span-2" : ""}`}>
+            <span className="text-sm font-medium">{label}</span>
+            {type === "textarea"
+              ? <Textarea rows={3} value={settings[key] ?? ""} onChange={event => update(key, event.target.value)} />
+              : <Input type={type} value={settings[key] ?? ""} onChange={event => update(key, type === "number" ? Number(event.target.value) : event.target.value)} />}
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+
+  return <Card className="admin-panel space-y-5 border-primary/40 bg-card/95 p-4 shadow-[0_0_30px_hsl(var(--primary)/0.14)] md:p-6">
+    <div className="admin-command-header rounded-xl border border-primary/30 bg-gradient-to-r from-primary/20 via-card to-card p-4">
+      <h2 className="admin-command-name text-2xl font-black tracking-wide text-primary">Website Settings</h2>
+      <p className="text-sm text-foreground/80">Lomita Shooters League · Administration Command Centre</p>
+    </div>
+    <p className="admin-panel-subtitle text-sm text-muted-foreground">Manage site identity, access, player rewards, betting limits, and feature switches. Changes are saved only when you press Save Settings.</p>
+    {error && <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+    {!settings && !error && <p>Loading website settings…</p>}
     {settings && <>
-      <label className="flex items-center justify-between gap-3"><span>Maintenance mode</span><Switch checked={!!settings.maintenance_mode} onCheckedChange={value => setSettings((s: any) => ({...s, maintenance_mode: value}))} /></label>
-      <label className="flex items-center justify-between gap-3"><span>Closed mode</span><Switch checked={!!settings.closed_mode} onCheckedChange={value => setSettings((s: any) => ({...s, closed_mode: value}))} /></label>
-      {(["maintenance_message","closed_message","contact_email","contact_phone","contact_whatsapp","site_name","hero_title","hero_subtitle","hero_tagline","min_stake","max_payout"] as const).map(key => <label key={key} className="block space-y-1">
-        <span className="text-sm font-semibold">{key.replace(/_/g," ").toUpperCase()}</span>
-        <Input type={key === "min_stake" || key === "max_payout" ? "number" : "text"} value={settings[key] ?? ""} onChange={event => setSettings((s: any) => ({...s, [key]: key === "min_stake" || key === "max_payout" ? Number(event.target.value) : event.target.value}))} />
-      </label>)}
-      <div className="flex flex-wrap gap-2"><Button className="admin-cmd-btn" onClick={() => void save()} disabled={busy}>{busy ? "Saving…" : "Save Settings"}</Button><Button className="admin-cmd-btn" variant="outline" onClick={() => void load()} disabled={busy}>Reload</Button></div>
+      <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+        <div><h3 className="font-bold">Website availability</h3><p className="text-sm text-muted-foreground">Control maintenance and temporary closure. These switches affect the public website.</p></div>
+        <div className="grid gap-3 md:grid-cols-2">{switches.slice(0,2).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
+      </section>
+      <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+        <h3 className="font-bold">Feature controls</h3>
+        <p className="text-sm text-muted-foreground">Enable or disable supported features without changing or deleting their records.</p>
+        <div className="grid gap-3 md:grid-cols-2">{switches.slice(2).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
+      </section>
+      {section("Branding and homepage", "Edit the site's identity and homepage text while keeping Shooters League branding.", ["site_name","platform_name","platform_tagline","platform_description","hero_title","hero_subtitle","hero_tagline","site_logo_url","platform_logo_url","platform_logo_auth_url","platform_logo_voucher_url","platform_logo_corner_url","platform_og_image_url"])}
+      {section("Contact, legal and announcements", "Update public contact information, legal copy and ticker content.", ["contact_email","contact_phone","contact_whatsapp","terms_content","about_us","why_trust_us","maintenance_message","closed_message","ticker_text","lottery_intro"])}
+      {section("Betting and withdrawal limits", "These limits apply to the existing betting system; verify values before saving.", ["min_stake","max_payout","min_withdrawal","min_selections_per_ticket","max_selections_per_ticket","exposure_warn_pct","house_low_balance"])}
+      {section("Lottery and rewards", "Configure lottery, spin, login streak, XP and referral rewards.", ["lottery_min_stake","lottery_max_stake","daily_login_base_reward","daily_login_bonus_per_day","daily_login_max_streak","xp_per_bet","xp_per_win","xp_per_login","xp_per_referral","referral_bonus_referrer","referral_bonus_referee","spin_min_reward","spin_max_reward","spin_cooldown_hours","challenge_reward_multiplier","gift_daily_limit","gift_min_amount","gift_max_per_tx","gift_fee_pct"])}
+      {section("Virtual game configuration", "Tune the existing virtual-game limits and timing. This does not enable the excluded Instant E-Football or Championship E-Football modes.", ["virtual_payout_multiplier","virtual_min_stake","virtual_max_stake","virtual_xp_per_win","virtual_win_bonus_tokens","virtual_round_duration_seconds","virtual_animation_seconds","virtual_max_score","virtual_concurrent_rounds","virtual_max_payout","virtual_min_selections","virtual_max_selections","virtual_lock_window_seconds","virtual_matches_per_round"])}
+      <div className="sticky bottom-2 z-10 flex flex-wrap gap-2 rounded-xl border bg-card/95 p-3 backdrop-blur">
+        <Button className="admin-cmd-btn" onClick={() => void save()} disabled={busy}>{busy ? "Saving settings…" : "Save Settings"}</Button>
+        <Button className="admin-cmd-btn" variant="outline" onClick={() => void load()} disabled={busy}>Reload from database</Button>
+      </div>
     </>}
   </Card>;
 }
