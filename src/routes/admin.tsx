@@ -5329,7 +5329,7 @@ function SettingsPanel() {
 
   // Only columns confirmed to exist in this Lomita Shooters League app_settings table.
   const settingsColumns = [
-    "maintenance_mode", "maintenance_message", "closed_mode", "closed_message",
+    "maintenance_mode", "maintenance_message", "closed_mode", "closed_message", "private_mode",
     "contact_email", "contact_phone", "contact_whatsapp", "terms_content", "about_us",
     "why_trust_us", "site_name", "platform_name", "platform_tagline", "platform_description",
     "site_logo_url", "platform_logo_url", "platform_logo_auth_url", "platform_logo_voucher_url",
@@ -5377,7 +5377,7 @@ function SettingsPanel() {
 
   const update = (key: string, value: any) => setSettings((current: any) => ({ ...current, [key]: value }));
   const switches: [string, string][] = [
-    ["maintenance_mode", "Maintenance mode"], ["closed_mode", "Temporarily close the website"],
+    ["maintenance_mode", "Maintenance mode"], ["closed_mode", "Temporarily close the website"], ["private_mode", "Private website — require login"],
     ["lottery_enabled", "Enable lottery"], ["ticker_enabled", "Enable announcement ticker"],
     ["shop_enabled", "Enable shop"], ["spin_enabled", "Enable spin rewards"],
     ["gift_enabled", "Enable player gifts"], ["friends_enabled", "Enable friends"],
@@ -5451,13 +5451,13 @@ function SettingsPanel() {
     {!settings && !error && <p>Loading website settings…</p>}
     {settings && <>
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
-        <div><h3 className="font-bold">Website availability</h3><p className="text-sm text-muted-foreground">Control maintenance and temporary closure. These switches affect the public website.</p></div>
-        <div className="grid gap-3 md:grid-cols-2">{switches.slice(0,2).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
+        <div><h3 className="font-bold">Website availability</h3><p className="text-sm text-muted-foreground">Control maintenance, temporary closure, and private access. In private mode, visitors must sign in or register before viewing the site.</p></div>
+        <div className="grid gap-3 md:grid-cols-2">{switches.slice(0,3).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
       </section>
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
         <h3 className="font-bold">Feature controls</h3>
         <p className="text-sm text-muted-foreground">Enable or disable supported features without changing or deleting their records.</p>
-        <div className="grid gap-3 md:grid-cols-2">{switches.slice(2).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{switches.slice(3).map(([key,label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border p-3"><span className="text-sm font-medium">{label}</span><Switch checked={!!settings[key]} onCheckedChange={value => update(key,value)} /></label>)}</div>
       </section>
       {section("Branding and homepage", "Edit the site's identity and homepage text while keeping Shooters League branding.", ["site_name","platform_name","platform_tagline","platform_description","hero_title","hero_subtitle","hero_tagline"])}
       <section className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
