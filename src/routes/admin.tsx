@@ -3923,7 +3923,7 @@ function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string)
         </button>
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="fixed !left-1/2 !top-auto !bottom-0 !-translate-x-1/2 !translate-y-0 w-[min(100vw,480px)] max-w-none h-[min(62dvh,510px)] max-h-[510px] flex flex-col overflow-hidden rounded-t-[2rem] rounded-b-none border border-primary/40 bg-card p-0 text-card-foreground shadow-2xl [&>button]:hidden">
+        <DialogContent className="fixed !left-1/2 !top-auto !bottom-0 !-translate-x-1/2 !translate-y-0 w-[min(100vw,480px)] max-w-none h-[min(78dvh,690px)] max-h-[690px] flex flex-col overflow-hidden rounded-t-[2rem] rounded-b-none border border-primary/40 bg-card p-0 text-card-foreground shadow-2xl [&>button]:hidden">
           <div className="flex items-center justify-between gap-2 shrink-0 border-b border-border px-4 py-3">
             <div>
               <DialogTitle className="text-base font-black text-primary">Quick Action</DialogTitle>
