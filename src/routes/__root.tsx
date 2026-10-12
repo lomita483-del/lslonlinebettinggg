@@ -186,7 +186,8 @@ function AdaptiveViewport() {
     // On phone-sized screens, use the desktop-width viewport automatically.
     // Full-size desktop browsers retain their normal responsive viewport.
     const phoneScreen = Math.min(window.screen.width, window.screen.height) <= 767;
-    const targetViewport = isAndroidApp || phoneScreen ? androidViewport : responsiveViewport;
+    const phoneViewport = `width=1280, initial-scale=${Math.min(window.screen.width / 1280, 1)}, viewport-fit=cover`;
+    const targetViewport = isAndroidApp ? androidViewport : phoneScreen ? phoneViewport : responsiveViewport;
     const apply = () => {
       if (meta.getAttribute("content") !== targetViewport) meta.setAttribute("content", targetViewport);
     };
