@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Download, Share, X, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const DISMISS_KEY = "ecb-install-prompt-dismissed-at";
+const DISMISS_KEY = "lsl-install-prompt-dismissed-at";
 const DISMISS_DAYS = 7;
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
@@ -32,7 +32,7 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     // The native Capacitor app is already installed; never show the browser/PWA install UI inside it.
-    if (/ECBAndroidApp\//i.test(navigator.userAgent)) return;
+    if (/LSLAndroidApp\\//i.test(navigator.userAgent)) return;
     if (isStandalone()) return;
 
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0);
@@ -95,14 +95,14 @@ export function PWAInstallPrompt() {
               <Smartphone className="h-5 w-5 text-primary" />
             </span>
             <div className="min-w-0 pr-5">
-              <div className="font-extrabold text-sm tracking-wide gradient-gold-text">Install ECB on your device</div>
+              <div className="font-extrabold text-sm tracking-wide gradient-gold-text">Install LSL on your device</div>
               {show ? (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Add the app to your home screen for fullscreen play, faster loading and reliable notifications.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Tap <Share className="inline h-3.5 w-3.5 align-text-bottom" /> <b>Share</b> then <b>Add to Home Screen</b> to install ECB and unlock notifications.
+                  Tap <Share className="inline h-3.5 w-3.5 align-text-bottom" /> <b>Share</b> then <b>Add to Home Screen</b> to install LSL and unlock notifications.
                 </p>
               )}
             </div>

@@ -54,16 +54,22 @@ export function TourGuide({ tourKey, steps, pageName }: { tourKey: string; steps
         if (settings.tutorials_for_visitors && !window.localStorage.getItem(localKey) && alive) setMode("welcome");
         return;
       }
-      const { data } = await supabase.from("tutorial_states").select("status,current_step,remind_after")
+      const { data, error } = await supabase.from("tutorial_states").select("status,current_step,remind_after")
         .eq("user_id", user.id).eq("tour_key", tourKey).maybeSingle();
       if (!alive) return;
+      // If the optional tutorial table has not been migrated yet, keep the tour usable
+      // with a per-user local fallback instead of breaking the page.
+      let state: any = data;
+      if (error) {
+        try { state = JSON.parse(window.localStorage.getItem(localKey) || "null"); } catch { state = null; }
+      }
       // Every member — new or long-standing — is offered each page tour once,
       // until they explicitly finish or skip it on that page.
-      const reminderDue = !data?.remind_after || new Date(data.remind_after).getTime() <= Date.now();
-      if (data?.status === "completed" || data?.status === "skipped") return;
-      if (data?.status === "remind_later" && !reminderDue) return;
-      if (data?.status === "in_progress") {
-        setStepIndex(Math.min(Number(data.current_step ?? 0), steps.length - 1));
+      const reminderDue = !state?.remind_after || new Date(state.remind_after).getTime() <= Date.now();
+      if (state?.status === "completed" || state?.status === "skipped") return;
+      if (state?.status === "remind_later" && !reminderDue) return;
+      if (state?.status === "in_progress") {
+        setStepIndex(Math.min(Number(state.current_step ?? 0), steps.length - 1));
         setMode("tour");
       } else setMode("welcome");
     };
@@ -77,7 +83,7 @@ export function TourGuide({ tourKey, steps, pageName }: { tourKey: string; steps
       return;
     }
     const now = new Date();
-    await supabase.from("tutorial_states").upsert({
+    const { error } = await supabase.from("tutorial_states").upsert({
       user_id: user.id,
       tour_key: tourKey,
       status,
@@ -86,6 +92,11 @@ export function TourGuide({ tourKey, steps, pageName }: { tourKey: string; steps
       completed_at: status === "completed" ? now.toISOString() : null,
       remind_after: status === "remind_later" ? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
     }, { onConflict: "user_id,tour_key" });
+    if (error) {
+      window.localStorage.setItem(localKey, JSON.stringify({ status, current_step: currentStep, remind_after: status === "remind_later" ? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString() : null }));
+    } else {
+      window.localStorage.removeItem(localKey);
+    }
   }, [localKey, stepIndex, tourKey, user]);
 
   const activeStep = steps[stepIndex];

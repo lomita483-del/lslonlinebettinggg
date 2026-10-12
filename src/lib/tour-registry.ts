@@ -78,7 +78,7 @@ const TOURS: Record<string, Omit<TourDefinition, "key">> = {
   "/wagers": page("Wagers", "Wagers — head-to-head challenges against other players, with escrowed stakes, live status and dispute handling.", [
     { target: "main a[href*='wager'], main button", title: "Create or Join a Wager", description: "Start a new head-to-head wager or accept an open challenge; the stake is held safely until the result is confirmed." },
   ]),
-  "/virtual": page("Virtual Games", "Virtual — instant and championship simulated fixtures that run around the clock, so there is always something to stake on.", []),
+  "/virtual": page("Virtual Games", "Virtual — scheduled simulated gang shootout rounds run around the clock, so there is always something to stake on.", []),
   "/arcade": page("Arcade", "Arcade — casino-style mini-games including the roulette wheel. Every round is settled instantly against your token balance.", []),
   "/lottery": page("Lottery", "Lottery — buy numbered tickets for the current draw and follow past results and payouts.", []),
   "/tournament": page("Tournaments", "Tournaments — bracket competitions with entry requirements, progress rounds and prize pools.", []),
