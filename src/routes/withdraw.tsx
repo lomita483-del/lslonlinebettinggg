@@ -12,7 +12,17 @@ import { toast } from "sonner";
 import { Wallet, Sparkles, Clock, CheckCircle, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/withdraw")({
-  head: () => ({ meta: [{ title: "Withdraw Tokens — LSL" }] }),
+  head: () => ({
+    meta: [
+      { title: "Withdraw Tokens — LSL" },
+      { name: "description", content: "Request a virtual token withdrawal from your LSL wallet and track the status of past withdrawal requests." },
+      { property: "og:title", content: "Withdraw Tokens — LSL" },
+      { property: "og:description", content: "Request a token withdrawal from your LSL wallet and track past requests." },
+      { property: "og:url", content: "/withdraw" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "/withdraw" }],
+  }),
   component: Page,
 });
 
