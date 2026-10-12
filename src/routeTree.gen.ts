@@ -43,6 +43,10 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as QuestsRouteImport } from './routes/quests'
+import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as WagersIndexRouteImport } from './routes/wagers.index'
+import { Route as WagersIdRouteImport } from './routes/wagers.$id'
 import { Route as TournamentsIndexRouteImport } from './routes/tournaments.index'
 import { Route as VirtualHistoryRouteImport } from './routes/virtual.history'
 import { Route as TournamentsIdRouteImport } from './routes/tournaments.$id'
@@ -223,6 +227,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QuestsRoute = QuestsRouteImport.update({
+  id: '/quests',
+  path: '/quests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WagersIndexRoute = WagersIndexRouteImport.update({
+  id: '/wagers/',
+  path: '/wagers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WagersIdRoute = WagersIdRouteImport.update({
+  id: '/wagers/$id',
+  path: '/wagers/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TournamentsIndexRoute = TournamentsIndexRouteImport.update({
   id: '/tournaments/',
   path: '/tournaments/',
@@ -315,8 +339,11 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/broadcast-push': typeof ApiPublicHooksBroadcastPushRoute
   '/api/public/hooks/process-scheduled-push': typeof ApiPublicHooksProcessScheduledPushRoute
   '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
-}
-export interface FileRoutesByTo {
+  '/quests': typeof QuestsRoute
+  '/referrals': typeof ReferralsRoute
+  '/wagers/$id': typeof WagersIdRoute
+  '/wagers/': typeof WagersIndexRoute
+}export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
@@ -360,8 +387,11 @@ export interface FileRoutesByTo {
   '/api/public/hooks/broadcast-push': typeof ApiPublicHooksBroadcastPushRoute
   '/api/public/hooks/process-scheduled-push': typeof ApiPublicHooksProcessScheduledPushRoute
   '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
-}
-export interface FileRoutesById {
+  '/quests': typeof QuestsRoute
+  '/referrals': typeof ReferralsRoute
+  '/wagers/$id': typeof WagersIdRoute
+  '/wagers': typeof WagersIndexRoute
+}export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
@@ -405,9 +435,12 @@ export interface FileRoutesById {
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
   '/api/public/hooks/broadcast-push': typeof ApiPublicHooksBroadcastPushRoute
   '/api/public/hooks/process-scheduled-push': typeof ApiPublicHooksProcessScheduledPushRoute
-  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
-}
-export interface FileRouteTypes {
+  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute 
+  '/quests': typeof QuestsRoute
+  '/referrals': typeof ReferralsRoute
+  '/wagers/$id': typeof WagersIdRoute
+  '/wagers/': typeof WagersIndexRoute
+}export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
@@ -453,6 +486,10 @@ export interface FileRouteTypes {
     | '/api/public/hooks/broadcast-push'
     | '/api/public/hooks/process-scheduled-push'
     | '/api/public/hooks/send-push'
+     | '/quests'
+     | '/referrals'
+     | '/wagers/$id'
+     | '/wagers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -498,6 +535,10 @@ export interface FileRouteTypes {
     | '/api/public/hooks/broadcast-push'
     | '/api/public/hooks/process-scheduled-push'
     | '/api/public/hooks/send-push'
+     | '/quests'
+     | '/referrals'
+     | '/wagers/$id'
+     | '/wagers'
   id:
     | '__root__'
     | '/'
@@ -543,6 +584,10 @@ export interface FileRouteTypes {
     | '/api/public/hooks/broadcast-push'
     | '/api/public/hooks/process-scheduled-push'
     | '/api/public/hooks/send-push'
+     | '/quests'
+     | '/referrals'
+     | '/wagers/$id'
+     | '/wagers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -587,9 +632,11 @@ export interface RootRouteChildren {
   ApiPublicHooksBroadcastPushRoute: typeof ApiPublicHooksBroadcastPushRoute
   ApiPublicHooksProcessScheduledPushRoute: typeof ApiPublicHooksProcessScheduledPushRoute
   ApiPublicHooksSendPushRoute: typeof ApiPublicHooksSendPushRoute
-}
-
-declare module '@tanstack/react-router' {
+  QuestsRoute: typeof QuestsRoute
+  ReferralsRoute: typeof ReferralsRoute
+  WagersIndexRoute: typeof WagersIndexRoute
+  WagersIdRoute: typeof WagersIdRoute
+}declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/withdraw': {
       id: '/withdraw'
@@ -892,10 +939,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBroadcastPushRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/quests': {
+      id: '/quests'
+      path: '/quests'
+      fullPath: '/quests'
+      preLoaderRoute: typeof QuestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wagers/': {
+      id: '/wagers/'
+      path: '/wagers'
+      fullPath: '/wagers/'
+      preLoaderRoute: typeof WagersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wagers/$id': {
+      id: '/wagers/$id'
+      path: '/wagers/$id'
+      fullPath: '/wagers/$id'
+      preLoaderRoute: typeof WagersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
-}
-
-interface MatchesRouteChildren {
+}interface MatchesRouteChildren {
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
 }
 
@@ -960,8 +1033,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksProcessScheduledPushRoute:
     ApiPublicHooksProcessScheduledPushRoute,
   ApiPublicHooksSendPushRoute: ApiPublicHooksSendPushRoute,
-}
-export const routeTree = rootRouteImport
+  QuestsRoute: QuestsRoute,
+  ReferralsRoute: ReferralsRoute,
+  WagersIndexRoute: WagersIndexRoute,
+  WagersIdRoute: WagersIdRoute,
+}export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
