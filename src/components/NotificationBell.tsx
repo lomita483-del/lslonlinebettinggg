@@ -11,7 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-type Notif = { id: string; title: string; body: string | null; link: string | null; is_read: boolean; created_at: string };
+type Notif = { id: string; title: string; body: string | null; link: string | null; image_url: string | null; is_read: boolean; created_at: string };
 
 export function NotificationBell() {
   const { user } = useAuth();
@@ -34,7 +34,24 @@ export function NotificationBell() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        load,
+        (payload: any) => {
+          if (payload.eventType === "INSERT" && payload.new) {
+            try {
+              const native = (window as any).LSLAndroid;
+              if (native?.notifyNotification) {
+                native.notifyNotification(JSON.stringify({
+                  title: payload.new.title ?? "Lomita Shooters League",
+                  body: payload.new.body ?? "",
+                  link: payload.new.link ?? "/notifications",
+                  notification_id: payload.new.id,
+                }));
+              }
+            } catch {
+              // Native notification bridge is optional; web realtime remains unaffected.
+            }
+          }
+          load();
+        },
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -57,7 +74,7 @@ export function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold grid place-items-center px-1 animate-pulse">
@@ -84,6 +101,7 @@ export function NotificationBell() {
                 <div className="flex items-start gap-2">
                   {!n.is_read && <span className="mt-1.5 h-2 w-2 rounded-full bg-destructive shrink-0" />}
                   <div className="flex-1 min-w-0">
+                    {n.image_url && <img src={n.image_url} alt="" className="mb-2 aspect-video w-full rounded-md border border-border object-cover" />}
                     <div className="font-bold text-sm truncate">{n.title}</div>
                     {n.body && <div className="text-xs text-muted-foreground line-clamp-2">{n.body}</div>}
                     <div className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
