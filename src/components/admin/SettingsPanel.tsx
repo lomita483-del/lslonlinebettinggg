@@ -123,7 +123,7 @@ export function SettingsPanel() {
 
   if (!settings) return <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">Loading admin settings…</div>;
 
-  return <div className="space-y-4">
+  return <div className="max-h-[calc(100vh-220px)] min-h-0 space-y-4 overflow-y-auto overscroll-y-contain pr-2 pb-4" style={{ scrollbarGutter: "stable" }}>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-card/70 p-4">
       <div className="flex items-center gap-3"><Settings2 className="h-5 w-5 text-primary" /><div><h2 className="font-bold">Website settings</h2><p className="text-xs text-muted-foreground">Availability, registration, tutorials, betting limits, contact details and appearance.</p></div></div>
       <Button onClick={save} disabled={busy || !dirty} className="gap-2"><Save className="h-4 w-4" />{busy ? "Saving…" : "Save settings"}</Button>
