@@ -1,7 +1,33 @@
+import { SuspiciousActivityPanel } from "@/components/admin/SuspiciousActivityPanel";
+import { FlaggedChatQueue } from "@/components/admin/FlaggedChatQueue";
+import { ChatToolsPanel } from "@/components/admin/ChatToolsPanel";
+import { Download } from "lucide-react";
+
+function exportMatchesCsv(list: any[]) {
+  const head = ["Match ID", "Title", "Home", "Away", "Kick-off", "Status", "Home score", "Away score"];
+  const rows = list.map((m: any) => [
+    m.public_id ?? m.id,
+    m.name ?? "",
+    m.home_team?.name ?? m.home_player?.name ?? "",
+    m.away_team?.name ?? m.away_player?.name ?? "",
+    m.start_time ? new Date(m.start_time).toLocaleString() : "TBD",
+    m.status ?? "",
+    m.home_score ?? "",
+    m.away_score ?? "",
+  ]);
+  const csv = [head, ...rows].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `seeded-matches-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Layout } from "@/components/Layout";
+import { ThemeToggleInline } from "@/components/ThemeToggle";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,18 +35,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RiskPanel, PnLPanel, ReferralsAdminPanel, EmblemModerationPanel, VipAdminPanel, StreakAndPushPanel, TokenRulesPanel, BroadcastPanel, ActivityPanel, ReportsPanel, AdminAILivePanel } from "@/components/admin/AdminExtensions";
+import { UserExperiencePanel } from "@/components/admin/UserExperiencePanel";
 import { VirtualAdminPanel } from "@/components/admin/VirtualAdminPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import {
   Shield, Users, Trophy, Coins, Megaphone, Settings as SettingsIcon, Ticket, AlertTriangle,
-  Calendar, Tag, Image as ImageIcon, BarChart3, History, Send, Plus, Trash2, Pencil, ChevronRight, ChevronLeft, Wallet, ListOrdered, Sparkles, ClipboardList, Lock, Pause, Play, Check, X, MessageSquare, Eye, RotateCw, Copy, Globe, MapPin, Smartphone, Clock, Filter,
+  Calendar, Tag, Image as ImageIcon, BarChart3, History, Send, Plus, Trash2, Pencil, ChevronRight, ChevronLeft, Wallet, ListOrdered, Sparkles, ClipboardList, ListChecks, Lock, Pause, Play, Check, X, MessageSquare, Eye, RotateCw, Copy, Globe, MapPin, Smartphone, Clock, Filter,
   Dice5, LogOut, Crosshair, Target, Flame, ThumbsUp, ThumbsDown,
-  Gift, BellRing, GalleryHorizontalEnd, Gamepad2, Vote, ShoppingBag, LifeBuoy,
+  Gift, BellRing, GalleryHorizontalEnd, Gamepad2, Vote, ShoppingBag, LifeBuoy, Newspaper, GraduationCap,
+  Swords,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import lslLogo from "@/assets/lsl-logo.png";
+import _ecbLogo from "@/assets/lsl-logo.png";
+const lslLogo = _ecbLogo.url;
 import tileBattle from "@/assets/tile-battle.jpg";
 import tileVirtual from "@/assets/tile-virtual.jpg";
 import tileChallenges from "@/assets/tile-challenges.jpg";
@@ -52,14 +81,22 @@ import { ClansAdminPanel } from "@/components/admin/ClansAdminPanel";
 import { LotteryAdminPanel } from "@/components/admin/LotteryAdminPanel";
 import { GiftsSpinAdminPanel } from "@/components/admin/GiftsSpinAdminPanel";
 import { SurveysAdminPanel } from "@/components/admin/SurveysAdminPanel";
+import { TasksAdminPanel } from "@/components/admin/TasksAdminPanel";
+import { FloatingWidgetsAdminPanel } from "@/components/admin/FloatingWidgetsAdminPanel";
 import { PollsAdminPanel, ShopAdminPanel, FaqAdminPanel } from "@/components/admin/CommunityAdminPanel";
 import { NewsAdminPanel } from "@/components/admin/NewsAdminPanel";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { RecurringPushPanel } from "@/components/admin/RecurringPushPanel";
 import { HomeBannersAdminPanel } from "@/components/admin/HomeBannersAdminPanel";
+import { PopupAdsAdminPanel } from "@/components/admin/PopupAdsAdminPanel";
+import { VideoAdsAdminPanel } from "@/components/admin/VideoAdsAdminPanel";
 import { ArcadeAdminPanel } from "@/components/admin/ArcadeAdminPanel";
+import { LuckyWheelAdminPanel } from "@/components/admin/LuckyWheelAdminPanel";
 import { CasinoHistoryPanel } from "@/components/admin/CasinoHistoryPanel";
 import { TopBetsPanel } from "@/components/admin/TopBetsPanel";
 import { TournamentAdminPanel } from "@/components/admin/TournamentAdminPanel";
+import { BrandingAdminPanel } from "@/components/admin/BrandingAdminPanel";
+import { WagersAdminPanel } from "@/components/admin/WagersAdminPanel";
 import { seedLegacyUsers } from "@/lib/seed-users.functions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { loadStandings, type LbRow } from "@/lib/leaderboard";
@@ -73,7 +110,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 export function AdminPage() {
-  const { isAdmin, isMod, loading } = useAuth();
+  const { isAdmin, isMod, profile, loading } = useAuth();
   const nav = useNavigate();
   const [alerts, setAlerts] = useState<Record<string, number>>({});
   // Admin-configurable console header image (falls back to bundled seed art).
@@ -81,23 +118,35 @@ export function AdminPage() {
   const [heroFit, setHeroFit] = useState<string>("cover");
   const [heroPos, setHeroPos] = useState<string>("center right");
   useEffect(() => {
-    supabase.from("app_settings").select("admin_hero_url,admin_hero_fit,admin_hero_position").eq("id", 1).maybeSingle()
-      .then(({ data }) => {
-        setHeroBg((data as any)?.admin_hero_url ?? null);
-        setHeroFit((data as any)?.admin_hero_fit ?? "cover");
-        setHeroPos((data as any)?.admin_hero_position ?? "center right");
-      });
+    const loadHero = () => {
+      supabase.from("app_settings").select("admin_hero_url,admin_hero_fit,admin_hero_position").eq("id", 1).maybeSingle()
+        .then(({ data, error }) => {
+          if (error) { console.error("admin_hero fetch failed:", error.message); return; }
+          setHeroBg((data as any)?.admin_hero_url ?? null);
+          setHeroFit((data as any)?.admin_hero_fit ?? "cover");
+          setHeroPos((data as any)?.admin_hero_position ?? "center right");
+        });
+    };
+    loadHero();
+    // Live-refresh the banner the instant Settings saves a new value —
+    // don't rely on the admin having to reload the page.
+    const ch = supabase
+      .channel("admin-hero-bg")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.1" }, loadHero)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
+  // Desktop-canvas scaling is handled by <DesktopCanvas> below (CSS transform),
+  // which is reliable everywhere — no viewport-meta hacks needed here.
   // Toggle the frosted-glass blur on the whole console so admins can verify
   // sensitive data alignment/layout against a clean, unblurred surface.
   const [unblurred, setUnblurred] = useState(false);
-  // Default to analytics for admins; re-sync once auth resolves so a reload
-  // never lands on the Tickets tab when an admin refreshes the page.
+  // Analytics is the default console for both Super Admins and moderators.
   const [activeTab, setActiveTab] = useState<string>("analytics");
   useEffect(() => {
     if (loading) return;
-    setActiveTab((prev) => (isAdmin ? (prev === "tickets" ? "analytics" : prev) : "tickets"));
-  }, [loading, isAdmin]);
+    if (isAdmin || isMod) setActiveTab((prev) => (prev === "tickets" ? "analytics" : prev));
+  }, [loading, isAdmin, isMod]);
   useEffect(() => { if (!loading && !isAdmin && !isMod) nav({ to: "/" }); }, [isAdmin, isMod, loading, nav]);
   useEffect(() => {
     if (!isAdmin) return;
@@ -142,54 +191,79 @@ export function AdminPage() {
 
   return (
     <Layout>
-      <main className={`admin-console-page${unblurred ? " admin-unblurred" : ""} w-full min-h-[calc(100vh-3.5rem)] overflow-x-hidden`}>
-        <div className="mx-auto w-full max-w-[1280px] px-3 sm:px-4 py-4 sm:py-6 space-y-4">
+      <main className={`admin-console-page${unblurred ? " admin-unblurred" : ""} w-full overflow-x-hidden`}>
+        <div className="admin-shell-logo" style={{ backgroundImage: `url(${lslLogo})` }} aria-hidden="true" />
+        <div className="w-[1280px] max-w-[1280px] ml-0 mr-auto px-4 py-6 space-y-4">
 
           <div
+            data-tour="admin-hero"
             className="admin-hero-frame relative overflow-hidden rounded-2xl p-5 sm:p-7"
             style={{ backgroundImage: `linear-gradient(90deg, rgba(3,12,10,0.76) 0%, rgba(3,12,10,0.44) 42%, rgba(3,12,10,0.18) 100%), url(${heroBg || adminConsoleSeed})`, backgroundSize: `auto, ${heroFit === "contain" ? "contain" : heroFit === "fill" ? "100% 100%" : "cover"}`, backgroundPosition: `center, ${heroPos || "center right"}`, backgroundRepeat: "no-repeat" }}
           >
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-gold" />
-            <div className="relative flex items-center gap-3 flex-wrap">
+            <div className="relative min-h-[120px] sm:min-h-[180px] flex flex-col justify-center">
+              <p className="text-xl sm:text-4xl font-black tracking-tight text-foreground/90 uppercase">Welcome</p>
+              <h1 className="text-2xl sm:text-5xl font-black uppercase leading-[1.05] gradient-gold-text">
+                Administrator
+              </h1>
+              <h2 className="text-2xl sm:text-5xl font-black uppercase leading-[1.05] text-emerald-400 truncate">{profile?.full_name || "Admin"}</h2>
+              <p className="mt-2 text-[11px] sm:text-sm text-muted-foreground">You have full control over the platform.</p>
+              <p className="text-[11px] sm:text-sm font-semibold text-primary">Monitor. Manage. Dominate.</p>
+            </div>
+          </div>
+
+          {/* COMMAND CENTRE bar — console title + global actions */}
+          <Card className="border-primary/25 bg-card/70 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={() => setActiveTab("analytics")}
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-gradient-gold text-primary-foreground grid place-items-center shadow-gold overflow-hidden ring-2 ring-primary/40 shrink-0 hover:ring-primary/70 transition"
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-gold grid place-items-center shadow-gold overflow-hidden ring-2 ring-primary/40 shrink-0 hover:ring-primary/70 transition"
                 title="Open analytics"
               >
-                <img src={lslLogo} alt="LSL" className="h-14 w-14 sm:h-16 sm:w-16 object-contain" />
+                <img src={lslLogo} alt="LSL" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
               </button>
-              <div>
-                <p className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-muted-foreground">Command center</p>
-                <h1 className="text-3xl sm:text-4xl font-bold gradient-gold-text">{isAdmin ? "Super Admin Console" : "Admin Panel"}</h1>
+              <div className="min-w-0">
+                <p className="text-[8px] sm:text-[10px] uppercase tracking-[0.35em] text-muted-foreground">Command centre</p>
+                <h2 className="text-lg sm:text-2xl font-black gradient-gold-text leading-tight truncate">{isAdmin ? "Super Admin Console" : "Admin Panel"}</h2>
               </div>
-              <Badge variant="outline" className={`ml-auto ${isAdmin ? "border-accent/50 text-accent" : "border-primary/50 text-primary"}`}>
-                {isAdmin ? "Super Admin" : "Admin"}
-              </Badge>
-              {isAdmin && (
-                <div className="flex items-center gap-1 w-full sm:w-auto sm:ml-2">
-                  <Button size="sm" variant="outline" className="text-[11px]" onClick={() => setUnblurred((v) => !v)} title="Toggle frosted-glass blur to verify alignment & layout">
-                    {unblurred ? "🔍 Unblurred" : "✨ Blurred"}
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-[11px]" onClick={() => { if (typeof window !== "undefined") window.location.reload(); }} title="Reload this admin page">⟳ Reload</Button>
-                  <Button size="sm" variant="outline" className="text-[11px]" onClick={async () => {
+              <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+                  <Shield className="h-3 w-3" />{isAdmin ? "Super Admin" : "Admin"}
+                </span>
+                <ConsolePill icon={Shield} label="Bans" onClick={() => setActiveTab("bannedusers")} />
+                <ConsolePill icon={BarChart3} label="Reports" onClick={() => setActiveTab("reports")} />
+                <ConsolePill icon={Sparkles} label="Activity" onClick={() => setActiveTab("activity")} />
+                {isAdmin && <ThemeToggleInline />}
+                {isAdmin && <ConsolePill icon={Eye} label={unblurred ? "Unblurred" : "Blurred"} onClick={() => setUnblurred((v) => !v)} />}
+                {isAdmin && (
+                  <ConsolePill icon={RotateCw} label="Hard Refresh" onClick={async () => {
                     try {
                       if ("serviceWorker" in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map((r) => r.unregister())); }
                       if (typeof caches !== "undefined") { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); }
                     } catch {}
                     if (typeof window !== "undefined") window.location.reload();
-                  }} title="Clear caches & service workers, then reload">⚡ Hard refresh</Button>
-                  <Button size="sm" variant="destructive" className="text-[11px]" onClick={async () => {
-                    const { error } = await (supabase as any).from("app_settings").update({ force_reload_at: new Date().toISOString() }).eq("id", 1);
-                    if (error) { (await import("sonner")).toast.error(error.message); return; }
-                    (await import("sonner")).toast.success("Reload broadcast sent to every active browser.");
-                  }} title="Force every logged-in browser to reload right now">📣 Broadcast reload</Button>
-                </div>
-              )}
+                  }} />
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const { error } = await (supabase as any).from("app_settings").update({ force_reload_at: new Date().toISOString() }).eq("id", 1);
+                      if (error) { (await import("sonner")).toast.error(error.message); return; }
+                      (await import("sonner")).toast.success("Reload broadcast sent to every active browser.");
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full bg-destructive px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-destructive-foreground hover:brightness-110 active:scale-95 transition"
+                  >
+                    <Megaphone className="h-3 w-3" />Broadcast Global
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          </Card>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs data-tour="admin-panel" value={activeTab} onValueChange={setActiveTab}> 
+            <TabsContent value="flags" className="mt-4"><SuspiciousActivityPanel /></TabsContent>
             <TabsContent value="users" className="mt-4"><UsersPanel /></TabsContent>
             <TabsContent value="bannedusers" className="mt-4"><BannedUsersPanel /></TabsContent>
             <TabsContent value="virtual" className="mt-4"><VirtualAdminPanel /></TabsContent>
@@ -209,6 +283,8 @@ export function AdminPage() {
             <TabsContent value="content" className="mt-4"><ContentPanel /></TabsContent>
             <TabsContent value="tickets" className="mt-4"><TicketsPanel /></TabsContent>
             <TabsContent value="tasks" className="mt-4"><TasksAchievementsPanel /></TabsContent>
+            <TabsContent value="quests" className="mt-4"><TasksAdminPanel /></TabsContent>
+            <TabsContent value="floating" className="mt-4"><FloatingWidgetsAdminPanel /></TabsContent>
             <TabsContent value="surveys" className="mt-4"><SurveysAdminPanel /></TabsContent>
             <TabsContent value="polls" className="mt-4"><PollsAdminPanel /></TabsContent>
             <TabsContent value="shop" className="mt-4"><ShopAdminPanel /></TabsContent>
@@ -223,7 +299,9 @@ export function AdminPage() {
             <TabsContent value="notify" className="mt-4"><NotifyPanel /></TabsContent>
             <TabsContent value="audit" className="mt-4"><AuditPanel /></TabsContent>
             <TabsContent value="analytics" className="mt-4"><AnalyticsPanel /></TabsContent>
+            <TabsContent value="ads" className="mt-4 space-y-6"><PopupAdsAdminPanel /><div className="border-t border-border pt-6"><VideoAdsAdminPanel /></div></TabsContent>
             <TabsContent value="settings" className="mt-4"><SettingsPanel /></TabsContent>
+            <TabsContent value="appupdates" className="mt-4"><AndroidAppUpdatesPanel /></TabsContent>
             <TabsContent value="adminai" className="mt-4"><AdminAILivePanel /></TabsContent>
             <TabsContent value="risk" className="mt-4"><RiskPanel /></TabsContent>
             <TabsContent value="pnl" className="mt-4"><PnLPanel /></TabsContent>
@@ -231,8 +309,10 @@ export function AdminPage() {
             <TabsContent value="tokenrules" className="mt-4"><TokenRulesPanel /></TabsContent>
             <TabsContent value="broadcast" className="mt-4"><BroadcastPanel /></TabsContent>
             <TabsContent value="pushblast" className="mt-4"><PushBroadcastPanel /></TabsContent>
+            <TabsContent value="pushrecurring" className="mt-4"><RecurringPushPanel /></TabsContent>
             <TabsContent value="banners" className="mt-4"><HomeBannersAdminPanel /></TabsContent>
             <TabsContent value="arcade" className="mt-4"><ArcadeAdminPanel /></TabsContent>
+            <TabsContent value="luckywheel" className="mt-4"><LuckyWheelAdminPanel /></TabsContent>
             <TabsContent value="casinohistory" className="mt-4"><CasinoHistoryPanel /></TabsContent>
             <TabsContent value="activity" className="mt-4"><ActivityPanel /></TabsContent>
             <TabsContent value="streakpush" className="mt-4"><StreakAndPushPanel /></TabsContent>
@@ -244,13 +324,23 @@ export function AdminPage() {
             <TabsContent value="topbets" className="mt-4"><TopBetsPanel /></TabsContent>
             <TabsContent value="tournaments" className="mt-4"><TournamentAdminPanel /></TabsContent>
             <TabsContent value="attendance" className="mt-4"><AttendancePanel /></TabsContent>
+            <TabsContent value="branding" className="mt-4"><BrandingAdminPanel /></TabsContent>
+            <TabsContent value="ux" className="mt-4"><UserExperiencePanel /></TabsContent>
+            <TabsContent value="wagers" className="mt-4"><WagersAdminPanel /></TabsContent>
           </Tabs>
         </div>
+
         <ActionConfirmDialog />
       </main>
     </Layout>
   );
 }
+
+/**
+ * Renders children on a fixed 1280px desktop canvas and scales it down with a
+ * CSS transform so phones get the exact desktop layout (League Arena stays in
+ * the right column) instead of the stacked mobile reflow.
+ */
 
 async function logAudit(action: string, target_type: string, target_id?: string, metadata?: any) {
   const u = (await supabase.auth.getUser()).data.user;
@@ -296,7 +386,7 @@ function AdminSectionRail({ alerts, onOpen }: { alerts: Record<string, number>; 
   ];
   const items = isAdmin ? all : all.filter((i) => i.mod);
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-6 gap-3">
       {items.map((item) => (
         <button key={item.tab} onClick={() => onOpen(item.tab)} className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card/70 p-3 text-left shadow-luxury transition hover:-translate-y-0.5 hover:border-primary/50">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-gold" />
@@ -311,11 +401,23 @@ function AdminSectionRail({ alerts, onOpen }: { alerts: Record<string, number>; 
 }
 
 function ChatMonitorPanel() {
+  const { isAdmin } = useAuth();
   const [msgs, setMsgs] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const [preferences, setPreferences] = useState({ enabled: true, push: true, inApp: true, rooms: ["general", "gang", "moderator"] as string[] });
+  const [savingPreferences, setSavingPreferences] = useState(false);
   async function load() {
-    const { data } = await supabase.from("chat_messages").select("*").order("created_at", { ascending: false }).limit(120);
+    const [{ data }, { data: settings }] = await Promise.all([
+      supabase.from("chat_messages").select("*").order("created_at", { ascending: false }).limit(120),
+      supabase.from("app_settings").select("chat_notifications_enabled,chat_push_enabled,chat_in_app_enabled,chat_notification_rooms").eq("id", 1).maybeSingle(),
+    ]);
     setMsgs(data ?? []);
+    if (settings) setPreferences({
+      enabled: settings.chat_notifications_enabled !== false,
+      push: settings.chat_push_enabled !== false,
+      inApp: settings.chat_in_app_enabled !== false,
+      rooms: Array.isArray(settings.chat_notification_rooms) ? settings.chat_notification_rooms.filter((room) => ["general", "gang", "moderator"].includes(room)) : ["general", "gang", "moderator"],
+    });
     const ids = Array.from(new Set((data ?? []).map((m: any) => m.user_id).filter(Boolean)));
     if (ids.length) {
       const { data: p } = await supabase.from("profiles").select("id,full_name,email,gang_name,is_muted,is_banned").in("id", ids);
@@ -328,11 +430,42 @@ function ChatMonitorPanel() {
     return () => { supabase.removeChannel(ch); };
   }, []);
   async function del(id: string) { await supabase.from("chat_messages").delete().eq("id", id); load(); }
+  async function savePreferences() {
+    setSavingPreferences(true);
+    const { error } = await supabase.from("app_settings").update({
+      chat_notifications_enabled: preferences.enabled,
+      chat_push_enabled: preferences.push,
+      chat_in_app_enabled: preferences.inApp,
+      chat_notification_rooms: preferences.rooms,
+    }).eq("id", 1);
+    setSavingPreferences(false);
+    if (error) toast.error("Could not save chat notification settings", { description: error.message });
+    else toast.success("Chat notification preferences saved");
+  }
+  function toggleRoom(room: string) {
+    setPreferences((current) => ({ ...current, rooms: current.rooms.includes(room) ? current.rooms.filter((item) => item !== room) : [...current.rooms, room] }));
+  }
   return (
     <div className="space-y-3">
+      {isAdmin && <FlaggedChatQueue />}
+      {isAdmin && <ChatToolsPanel />}
       <Card className="glass-strong p-4 flex items-center gap-3">
         <MessageSquare className="h-5 w-5 text-primary" />
         <div><div className="font-bold">Live Chat Monitor</div><div className="text-xs text-muted-foreground">Newest messages across all rooms with quick moderation access.</div></div>
+      </Card>
+      <Card className="glass-strong p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><div className="flex items-center gap-2 font-bold"><BellRing className="h-4 w-4 text-primary" />Chat notification preferences</div><div className="mt-1 text-xs text-muted-foreground">Control offline device alerts and in-app notification history for new chat messages.</div></div>
+          <Button onClick={savePreferences} disabled={savingPreferences}>{savingPreferences ? "Saving…" : "Save preferences"}</Button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {[
+            ["enabled", "Chat notifications", "Master control for all chat alerts."],
+            ["push", "Device push", "Notify subscribed devices, including offline users."],
+            ["inApp", "In-app history", "Archive messages in each recipient's notification page."],
+          ].map(([key, label, description]) => <label key={key} className="flex items-center justify-between gap-3 rounded-md border border-primary/20 bg-background/40 p-3"><span><span className="block text-sm font-bold">{label}</span><span className="block text-xs text-muted-foreground">{description}</span></span><Switch checked={preferences[key as "enabled" | "push" | "inApp"] as boolean} onCheckedChange={(checked) => setPreferences((current) => ({ ...current, [key]: checked }))} /></label>)}
+        </div>
+        <div className="mt-4"><div className="mb-2 text-xs font-bold uppercase text-muted-foreground">Enabled rooms</div><div className="flex flex-wrap gap-2">{["general", "gang", "moderator"].map((room) => <Button key={room} type="button" size="sm" variant={preferences.rooms.includes(room) ? "default" : "outline"} onClick={() => toggleRoom(room)} className="capitalize">{room}</Button>)}</div></div>
       </Card>
       {msgs.map((m) => {
         const p = profiles[m.user_id];
@@ -398,7 +531,7 @@ function UsersPanel() {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [sort, setSort] = useState<string>("newest");
-  const [edit, setEdit] = useState<any | null>(null);
+  const navMember = useNavigate();
 
   async function load() {
     const { data: rich } = await (supabase as any).rpc("admin_list_users_with_kyc");
@@ -650,7 +783,7 @@ function UsersPanel() {
 
               <Button
                 size="sm"
-                onClick={() => setEdit(u)}
+                onClick={() => navMember({ to: "/admin/members/$userId", params: { userId: u.id } })}
                 className="btn-luxury w-full mt-3 h-9 font-bold tracking-wide"
               >
                 <Pencil className="h-3 w-3 mr-1" />Manage Member
@@ -667,7 +800,6 @@ function UsersPanel() {
         </div>
       )}
 
-      {edit && <UserEditDialog user={edit} roles={rolesByUser[edit.id] ?? []} onClose={() => { setEdit(null); load(); }} />}
     </div>
   );
 }
@@ -1213,9 +1345,15 @@ function MatchesPanel() {
   const [matches, setMatches] = useState<any[]>([]);
   const [wizard, setWizard] = useState(false);
   const [shooterWizard, setShooterWizard] = useState(false);
+  const [tab, setTab] = useState<"live" | "scheduled" | "ended">("live");
+  const [query, setQuery] = useState("");
+  const [datePreset, setDatePreset] = useState<"any" | "today" | "yesterday" | "custom">("any");
+  const [dateBasis, setDateBasis] = useState<"created" | "ended">("ended");
+  const [customDate, setCustomDate] = useState<string>("");
+  const [editingScore, setEditingScore] = useState<any | null>(null);
 
   async function load() {
-    const { data } = await (supabase as any).from("matches").select("*, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).neq("match_kind", "future").order("start_time", { ascending: false });
+    const { data } = await (supabase as any).from("matches").select("*, public_id, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).neq("match_kind", "future").order("start_time", { ascending: false });
     setMatches(data ?? []);
   }
   useEffect(() => { load(); }, []);
@@ -1272,24 +1410,52 @@ function MatchesPanel() {
     toast.success("Match settled — bets paid out"); load();
   }
   async function deleteMatch(id: string) {
-    if (!await confirm({ title: "Remove this match from the panel?", description: "The match will be hidden from the matches list but kept in the database so existing bet vouchers keep showing team and stake info.", tone: "danger", confirmText: "Remove" })) return;
+    if (!await confirm({ title: "Delete match & subtract from Leaderboard?", description: "The match is soft-deleted: it stays in the database so existing bet vouchers still show team and stake info, but the Leaderboard immediately stops counting its wins, losses, goals and points.", tone: "danger", confirmText: "Delete match" })) return;
     const { error } = await supabase.from("matches").update({ is_archived: true }).eq("id", id);
     if (error) toast.error(error.message); else { logAudit("match_archived", "match", id); load(); toast.success("Match archived"); }
   }
 
-  async function clearEnded() {
-    const endedCount = matches.filter((m) => m.status === "ended").length;
-    if (endedCount === 0) { toast.info("No ended matches to clear."); return; }
+  async function clearEnded(mode: "admin" | "everywhere") {
+    const clearable = matches.filter((m) => m.status === "ended" || m.status === "cancelled");
+    const endedCount = clearable.length;
+    if (endedCount === 0) { toast.info("No ended or cancelled matches to clear."); return; }
+    const description = mode === "everywhere"
+      ? `⚠ IRREVERSIBLE — This will wipe ${endedCount} ended/cancelled match${endedCount === 1 ? "" : "es"} from the admin AND from the Leaderboard (all wins, losses, goals and points those matches contributed will be removed). User bet vouchers themselves are preserved.`
+      : `This archives ${endedCount} match${endedCount === 1 ? "" : "es"} from the admin panel only. The Leaderboard is NOT affected — accumulated wins, losses and points from these matches stay on the board.`;
     if (!await confirm({
-      title: `Clear ${endedCount} ended match${endedCount === 1 ? "" : "es"}?`,
-      description: "All matches with status 'ended' will be archived from the panel so you can create new ones. User bet vouchers and history stay intact — only the match listing here is cleared.",
-      tone: "danger", confirmText: "Clear ended matches",
+      title: mode === "everywhere" ? `Wipe ${endedCount} match${endedCount === 1 ? "" : "es"} EVERYWHERE?` : `Archive ${endedCount} match${endedCount === 1 ? "" : "es"} from admin only?`,
+      description, tone: "danger",
+      confirmText: mode === "everywhere" ? "Yes, wipe everywhere" : "Archive from admin",
     })) return;
-    const { data: archived, error } = await supabase
-      .from("matches").update({ is_archived: true }).eq("is_archived", false).eq("status", "ended").select("id");
-    if (error) { toast.error(error.message); return; }
-    await logAudit("matches_bulk_archive_ended", "matches", undefined, { count: archived?.length ?? 0, match_ids: (archived ?? []).map((m: any) => m.id) });
-    toast.success(`Archived ${archived?.length ?? 0} ended match${archived?.length === 1 ? "" : "es"}`);
+    // Second-stage confirmation for the destructive path.
+    if (mode === "everywhere" && !await confirm({
+      title: "Final check — this cannot be undone",
+      description: "You are about to permanently remove these matches from the Leaderboard. Continue?",
+      tone: "danger", confirmText: "I understand, wipe now",
+    })) return;
+    if (mode === "everywhere") {
+      const { data: wiped, error } = await supabase
+        .from("matches")
+        .update({ is_archived: true, exclude_from_leaderboard: true } as any)
+        .eq("is_archived", false).in("status", ["ended", "cancelled"]).select("id");
+      // Some deployments don't have `exclude_from_leaderboard`; fall back to archive-only.
+      if (error) {
+        const { data: retry, error: e2 } = await supabase
+          .from("matches").update({ is_archived: true }).eq("is_archived", false).in("status", ["ended", "cancelled"]).select("id");
+        if (e2) { toast.error(e2.message); return; }
+        await logAudit("matches_bulk_wipe_everywhere", "matches", undefined, { count: retry?.length ?? 0 });
+        toast.success(`Wiped ${retry?.length ?? 0} match${retry?.length === 1 ? "" : "es"} — leaderboard updated`);
+      } else {
+        await logAudit("matches_bulk_wipe_everywhere", "matches", undefined, { count: wiped?.length ?? 0 });
+        toast.success(`Wiped ${wiped?.length ?? 0} match${wiped?.length === 1 ? "" : "es"} — leaderboard updated`);
+      }
+    } else {
+      const { data: archived, error } = await supabase
+        .from("matches").update({ is_archived: true }).eq("is_archived", false).in("status", ["ended", "cancelled"]).select("id");
+      if (error) { toast.error(error.message); return; }
+      await logAudit("matches_bulk_archive_ended", "matches", undefined, { count: archived?.length ?? 0 });
+      toast.success(`Archived ${archived?.length ?? 0} match${archived?.length === 1 ? "" : "es"}`);
+    }
     load();
   }
 
@@ -1300,28 +1466,130 @@ function MatchesPanel() {
     load();
   }
 
+  async function saveEndedScore(m: any, hs: number, as: number) {
+    let winnerId: string | null = null;
+    if (hs > as) winnerId = m.home_team_id;
+    else if (as > hs) winnerId = m.away_team_id;
+    const { error } = await supabase.from("matches").update({ home_score: hs, away_score: as, winner_team_id: winnerId }).eq("id", m.id);
+    if (error) { toast.error(error.message); return; }
+    await logAudit("match_score_edited", "match", m.id, { home_score: hs, away_score: as, winner_team_id: winnerId });
+    toast.success("Score updated — Leaderboard recalculated. Note: bets already paid are not re-settled.");
+    setEditingScore(null);
+    load();
+  }
+
+  // Date range for the active filter
+  function inDateRange(m: any): boolean {
+    if (datePreset === "any") return true;
+    const ts = dateBasis === "ended"
+      ? new Date(m.settled_at ?? m.updated_at ?? m.start_time ?? m.created_at ?? 0)
+      : new Date(m.created_at ?? m.start_time ?? 0);
+    const target = new Date();
+    if (datePreset === "yesterday") target.setDate(target.getDate() - 1);
+    if (datePreset === "custom" && customDate) target.setTime(new Date(customDate).getTime());
+    if (datePreset === "custom" && !customDate) return true;
+    return ts.getFullYear() === target.getFullYear() && ts.getMonth() === target.getMonth() && ts.getDate() === target.getDate();
+  }
+
+  const q = query.trim().toLowerCase();
+  const filteredAll = matches.filter((m: any) => {
+    if (!q) return true;
+    const parts = [
+      m.public_id, m.name,
+      m.home_team?.name, m.away_team?.name,
+      m.home_player?.name, m.away_player?.name,
+    ].filter(Boolean).map((s: string) => s.toLowerCase());
+    return parts.some((p) => p.includes(q));
+  }).filter(inDateRange);
+
+  const groups = {
+    live: filteredAll.filter((m: any) => m.status === "live"),
+    scheduled: filteredAll.filter((m: any) => m.status === "scheduled"),
+    ended: filteredAll.filter((m: any) => m.status === "ended" || m.status === "cancelled"),
+  };
+  const activeList = groups[tab];
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button className="btn-luxury" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" />New Match (Wizard)</Button>
-        <Button className="btn-luxury" onClick={() => setShooterWizard(true)}><Crosshair className="h-4 w-4 mr-1" />New Shooter Match</Button>
-        <Button className="btn-luxury" onClick={() => window.dispatchEvent(new CustomEvent("admin:set-tab", { detail: "futures" }))}><Target className="h-4 w-4 mr-1" />New Tournament Futures</Button>
-        <Button variant="destructive" onClick={clearEnded}>
-          <Trash2 className="h-4 w-4 mr-1" />Clear Ended Matches
-        </Button>
-        <Badge variant="outline" className="ml-auto text-[10px]">Bet history is preserved — only the panel list is cleared.</Badge>
+      <ArenaImageSettings />
+      <div className="match-toolbar">
+        <button type="button" className="match-tool-btn" onClick={() => setWizard(true)}><Plus className="h-4 w-4" />New Match (Wizard)</button>
+        <button type="button" className="match-tool-btn match-tool-btn--emerald" onClick={() => setShooterWizard(true)}><Crosshair className="h-4 w-4" />New Shooter Match</button>
+        <button type="button" className="match-tool-btn" onClick={() => window.dispatchEvent(new CustomEvent("admin:set-tab", { detail: "futures" }))}><Target className="h-4 w-4" />New Tournament Fixtures</button>
+        <button type="button" className="match-tool-btn match-tool-btn--emerald" onClick={() => exportMatchesCsv(filteredAll)}><Download className="h-4 w-4" />Export CSV</button>
+        <button type="button" className="match-tool-btn match-tool-btn--danger" onClick={() => clearEnded("admin")}><Trash2 className="h-4 w-4" />Wipe from admin only</button>
+        <button type="button" className="match-tool-btn match-tool-btn--danger" onClick={() => clearEnded("everywhere")}><Trash2 className="h-4 w-4" />Wipe EVERYWHERE (incl. Leaderboard)</button>
       </div>
       {wizard && <MatchWizard onClose={() => { setWizard(false); load(); }} />}
       {shooterWizard && <ShooterMatchWizard onClose={() => { setShooterWizard(false); load(); }} />}
 
+      {/* Search + date filter */}
+      <Card className="glass p-3 space-y-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[220px]">
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Search (ID · team · player · title)</label>
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="e.g. LSL-ABC123, Lions, John…" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Date basis</label>
+            <Select value={dateBasis} onValueChange={(v) => setDateBasis(v as any)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ended">Ended / Settled</SelectItem>
+                <SelectItem value="created">Created</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-muted-foreground">Date</label>
+            <Select value={datePreset} onValueChange={(v) => setDatePreset(v as any)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="custom">Custom…</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {datePreset === "custom" && (
+            <Input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="w-[160px]" />
+          )}
+        </div>
+      </Card>
+
+      {/* Category tabs */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <TabsList>
+          <TabsTrigger value="live">🟢 ONGOING ({groups.live.length})</TabsTrigger>
+          <TabsTrigger value="scheduled">🟠 UPCOMING ({groups.scheduled.length})</TabsTrigger>
+          <TabsTrigger value="ended">🔴 ENDED ({groups.ended.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="space-y-2">
-        {matches.map((m: any) => (
-          <Card key={m.id} className="glass p-3 flex items-center justify-between gap-3 flex-wrap">
-            <div className="min-w-0 flex items-center gap-2">
-              {m.home_team?.logo_url && <img src={m.home_team.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />}
+        {activeList.length === 0 && (
+          <div className="text-sm text-muted-foreground text-center py-6">No matches match this filter.</div>
+        )}
+        {activeList.map((m: any) => (
+          <Card key={m.id} data-state={m.status} className="match-row p-3 pl-5 flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0 flex items-center gap-3">
+              {m.home_team?.logo_url
+                ? <img src={m.home_team.logo_url} alt="" className="match-row-logo" />
+                : <div className="match-row-logo grid place-items-center text-[10px] font-black text-primary">⚽</div>}
               <div>
-                <div className="font-bold truncate">{m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name} vs {m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name} {m.status === "ended" && <span className="text-xs text-muted-foreground">({m.home_score}–{m.away_score})</span>}</div>
-                <div className="text-xs text-muted-foreground">{m.name} · {m.start_time ? new Date(m.start_time).toLocaleString() : ""} {m.match_kind === "shooter" && <Badge variant="outline" className="ml-2 text-[9px] border-accent/40 text-accent">Shooter 1v1</Badge>}</div>
+                <div className="match-row-title truncate">
+                  <span className="text-foreground">{m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name}</span>
+                  <span className="mx-1 text-[10px] text-muted-foreground lowercase">vs</span>
+                  <span className="gradient-gold-text">{m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name}</span>
+                  {m.status === "ended" && <span className="ml-2 text-xs font-mono text-muted-foreground">({m.home_score}–{m.away_score})</span>}
+                </div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                  {m.public_id && <Badge variant="outline" className="text-[10px] font-mono border-primary/40 text-primary bg-primary/5">{m.public_id}</Badge>}
+                  <span className="truncate">{m.name}</span>
+                  {m.start_time && <span>· {new Date(m.start_time).toLocaleString()}</span>}
+                  {m.match_kind === "shooter" && <Badge variant="outline" className="text-[9px] border-accent/40 text-accent">Shooter 1v1</Badge>}
+                </div>
               </div>
             </div>
             <div className="flex gap-1 items-center flex-wrap">
@@ -1336,8 +1604,44 @@ function MatchesPanel() {
               )}
               {m.status === "scheduled" && <Button size="sm" onClick={() => setStatus(m.id, "live")}>Start Live</Button>}
               {m.status === "live" && <Button size="sm" onClick={() => settle(m)}>End Match</Button>}
+              {m.status === "ended" && <Button size="sm" variant="outline" onClick={() => setEditingScore(m)} title="Edit final score — leaderboard recalculates"><Pencil className="h-3 w-3 mr-1" />Edit Score</Button>}
               <CorrectScoreManagerButton match={m} onSaved={load} />
               {m.status !== "cancelled" && m.status !== "ended" && <Button size="sm" variant="outline" onClick={() => setStatus(m.id, "cancelled")}>Cancel</Button>}
+              <Button
+                size="sm"
+                variant={m.is_void ? "default" : "outline"}
+                className={m.is_void ? "bg-fuchsia-600 hover:bg-fuchsia-500 text-white" : "border-fuchsia-500/40 text-fuchsia-300 hover:bg-fuchsia-500/10"}
+                onClick={async () => {
+                  const nextVoid = !m.is_void;
+                  let reason: string | undefined;
+                  if (nextVoid) {
+                    const ok = await confirm({
+                      title: "Confirm Match Void",
+                      description: "This action will mark this match as VOID across every bet voucher that contains it. The affected tickets will remain active and payouts will be recalculated automatically.",
+                      confirmText: "Confirm Void",
+                      tone: "danger",
+                      inputLabel: "Reason (shown in audit log)",
+                      inputPlaceholder: "e.g. Match cancelled, server desync, disputed result…",
+                    });
+                    if (!ok || typeof ok !== "object") return;
+                    reason = ok.value || undefined;
+                  } else {
+                    const ok = await confirm({
+                      title: "Remove Void Status?",
+                      description: "This match will return to normal settlement across every voucher that contains it.",
+                      confirmText: "Remove Void",
+                    });
+                    if (!ok) return;
+                  }
+                  const { error } = await supabase.rpc("admin_toggle_match_void", { _match_id: m.id, _void: nextVoid, _reason: reason } as any);
+                  if (error) { toast.error(error.message); return; }
+                  toast.success(nextVoid ? "Match voided — all tickets treat this leg as odds 0.00" : "Match un-voided");
+                  load();
+                }}
+                title={m.is_void ? "Un-void this match" : "Void this match (tickets keep their other legs; this leg drops to 0.00)"}
+              >
+                {m.is_void ? "Voided" : "Void"}
+              </Button>
               <Button size="sm" variant="destructive" onClick={() => deleteMatch(m.id)} title="Delete match"><Trash2 className="h-3 w-3" /></Button>
             </div>
             <div className="w-full flex flex-wrap items-center gap-2 border-t border-border/40 pt-2 mt-1">
@@ -1355,7 +1659,58 @@ function MatchesPanel() {
           </Card>
         ))}
       </div>
+      {editingScore && (
+        <EndedScoreEditor match={editingScore} onCancel={() => setEditingScore(null)} onSave={saveEndedScore} />
+      )}
     </div>
+  );
+}
+
+function ArenaImageSettings() {
+  const [settings, setSettings] = useState({ matches_arena_image_url: "", matches_arena_image_fit: "cover", matches_arena_image_position: "center" });
+  useEffect(() => { supabase.from("app_settings").select("matches_arena_image_url,matches_arena_image_fit,matches_arena_image_position").eq("id", 1).maybeSingle().then(({ data }) => { if (data) setSettings(data as any); }); }, []);
+  async function save(next: typeof settings) {
+    setSettings(next);
+    const { error } = await supabase.from("app_settings").update(next as any).eq("id", 1);
+    if (error) toast.error(error.message); else toast.success("Arena image settings saved");
+  }
+  return <ImageSettingControl label="The Arena banner image" value={settings.matches_arena_image_url} onChange={(url) => void save({ ...settings, matches_arena_image_url: url ?? "" })} fit={settings.matches_arena_image_fit} onFitChange={(fit) => void save({ ...settings, matches_arena_image_fit: fit })} position={settings.matches_arena_image_position} onPositionChange={(position) => void save({ ...settings, matches_arena_image_position: position })} aspect="16 / 4" help="Displayed above the public Matches page. Upload and crop an image, then adjust its fit and focal point." />;
+}
+
+function EndedScoreEditor({ match, onCancel, onSave }: { match: any; onCancel: () => void; onSave: (m: any, hs: number, as: number) => void }) {
+  const [hs, setHs] = useState<number>(Number(match.home_score ?? 0));
+  const [as_, setAs] = useState<number>(Number(match.away_score ?? 0));
+  const homeLabel = match.match_kind === "shooter" ? match.home_player?.name : match.home_team?.name;
+  const awayLabel = match.match_kind === "shooter" ? match.away_player?.name : match.away_team?.name;
+  return (
+    <Dialog open onOpenChange={onCancel}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit ended match score</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="text-xs text-muted-foreground">
+            {match.public_id && <span className="font-mono">{match.public_id} · </span>}
+            Editing the score recalculates W/L/D, Goal Difference and Points on the Leaderboard automatically (P — Played — does not change). Bets that have already been paid are NOT re-settled.
+          </div>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground">{homeLabel || "Home"}</label>
+              <Input type="number" min={0} value={hs} onChange={(e) => setHs(Number(e.target.value))} />
+            </div>
+            <div className="pb-2 text-xl font-black">–</div>
+            <div>
+              <label className="text-xs text-muted-foreground">{awayLabel || "Away"}</label>
+              <Input type="number" min={0} value={as_} onChange={(e) => setAs(Number(e.target.value))} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button className="btn-luxury" onClick={() => onSave(match, hs, as_)}>Save score</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1413,7 +1768,7 @@ async function settleFutureBets(matchId: string, winningOddIds: string[], winnin
   const { data: sels } = await supabase.from("bet_selections").select("*").eq("match_id", matchId);
   if (!sels || sels.length === 0) return;
   for (const s of sels) {
-    await supabase.from("bet_selections").update({ result: winningOddIds.includes(s.odd_id) ? "won" : "lost" }).eq("id", s.id);
+    await supabase.from("bet_selections").update({ result: s.odd_id && winningOddIds.includes(s.odd_id) ? "won" : "lost" }).eq("id", s.id);
   }
   const betIds = Array.from(new Set(sels.map((s: any) => s.bet_id)));
   for (const bid of betIds) {
@@ -1433,9 +1788,10 @@ async function settleFutureBets(matchId: string, winningOddIds: string[], winnin
 }
 
 function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
+  const confirm = useConfirm();
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  const [form, setForm] = useState({ home_player_id: "", away_player_id: "", oddsA: 2, draw: 3.5, oddsB: 2, name: "", start_time: "", location: "", featured: true, marketing: true, homePresent: false, awayPresent: false, restrictRepeat: false });
+  const [form, setForm] = useState({ home_player_id: "", away_player_id: "", oddsA: 2, draw: 3.5, oddsB: 2, name: "", start_time: "", location: "", featured: true, featured_image_url: null as string | null, featured_image_fit: "cover", featured_image_position: "center", marketing: true, homePresent: false, awayPresent: false, restrictRepeat: false });
 
   useEffect(() => {
     Promise.all([
@@ -1452,6 +1808,13 @@ function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
     const homeTeamId = home?.team_id || teams[0]?.id;
     const awayTeamId = away?.team_id || teams.find((t) => t.id !== homeTeamId)?.id || homeTeamId;
     if (!homeTeamId || !awayTeamId) { toast.error("Create at least one team in Clan first, then seed shooters freely with or without team tag."); return; }
+    const startLabel = form.start_time ? new Date(form.start_time).toLocaleString() : "immediately";
+    const ok = await confirm({
+      title: "Post this shooter match?",
+      description: `${home?.name} (${form.oddsA}) vs ${away?.name} (${form.oddsB}) · Draw ${form.draw} · Start ${startLabel} · Featured: ${form.featured ? "Yes" : "No"}. Users can bet immediately once posted.`,
+      confirmText: "Post match", cancelText: "Review again",
+    });
+    if (!ok) return;
     const { data: m, error } = await supabase.from("matches").insert({
       name: form.name || `${home?.name} vs ${away?.name}`,
       home_team_id: homeTeamId,
@@ -1461,6 +1824,8 @@ function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
       match_kind: "shooter",
       marketing_enabled: form.marketing,
       is_featured: form.featured,
+      featured_image_url: form.featured ? form.featured_image_url : null,
+      featured_image_fit: form.featured_image_fit, featured_image_position: form.featured_image_position,
       location: form.location || "Shooter 1v1",
       start_time: form.start_time ? new Date(form.start_time).toISOString() : new Date().toISOString(),
       status: "scheduled",
@@ -1497,6 +1862,19 @@ function ShooterMatchWizard({ onClose }: { onClose: () => void }) {
             <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3"><Switch checked={form.featured} onCheckedChange={(v) => setForm({ ...form, featured: v })} />Feature on homepage</label>
             <label className="flex items-center gap-2 rounded-lg border border-accent/20 bg-card/60 p-3"><Switch checked={form.marketing} onCheckedChange={(v) => setForm({ ...form, marketing: v })} />Post for marketing</label>
           </div>
+          {form.featured && (
+            <ImageSettingControl
+              label="Featured match image (optional)"
+              value={form.featured_image_url}
+              onChange={(url) => setForm({ ...form, featured_image_url: url })}
+              fit={form.featured_image_fit}
+              onFitChange={(v) => setForm({ ...form, featured_image_fit: v })}
+              position={form.featured_image_position}
+              onPositionChange={(v) => setForm({ ...form, featured_image_position: v })}
+              aspect="16 / 9"
+              help="Shown as the backdrop of this shooter match in the home page Featured section."
+            />
+          )}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3"><Switch checked={form.homePresent} onCheckedChange={(v) => setForm({ ...form, homePresent: v })} />Shooter A present (counts on Leaderboard)</label>
             <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3"><Switch checked={form.awayPresent} onCheckedChange={(v) => setForm({ ...form, awayPresent: v })} />Shooter B present (counts on Leaderboard)</label>
@@ -1871,13 +2249,13 @@ function FutureTinyEmblem({ label, url }: { label: string; url?: string | null }
 }
 
 function MatchWizard({ onClose }: { onClose: () => void }) {
-  const [step, setStep] = useState(1);
+  const confirm = useConfirm();
   const [teams, setTeams] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
   const [teamA, setTeamA] = useState({ id: "", name: "", logoFile: null as File | null, mainPlayers: "", subPlayers: "" });
   const [teamB, setTeamB] = useState({ id: "", name: "", logoFile: null as File | null, mainPlayers: "", subPlayers: "" });
-  const [details, setDetails] = useState({ homeIs: "A" as "A" | "B", oddsA: 2.0, draw: 3.5, oddsB: 2.0, name: "", start_time: "", location: "", category_id: "", featured: false, homePresent: false, awayPresent: false, restrictRepeat: false, featuredBgFile: null as File | null, featuredBgUrl: "" });
-  const [csEnabled, setCsEnabled] = useState(true);
+  const [details, setDetails] = useState({ homeIs: "A" as "A" | "B", oddsA: 2.0, draw: 3.5, oddsB: 2.0, name: "", start_time: "", location: "", category_id: "", featured: false, featured_image_url: null as string | null, featured_image_fit: "cover", featured_image_position: "center", homePresent: false, awayPresent: false, restrictRepeat: false });
+  const [csEnabled, setCsEnabled] = useState(false);
   const [csRows, setCsRows] = useState<Array<{ label: string; value: number }>>(
     POPULAR_SCORES.map(([h, a]) => {
       const label = `${h}-${a}`;
@@ -1925,25 +2303,24 @@ function MatchWizard({ onClose }: { onClose: () => void }) {
     const awayName = (details.homeIs === "A" ? teamB.name : teamA.name) || teams.find((t) => t.id === away_team_id)?.name;
     const homeOdds = details.homeIs === "A" ? details.oddsA : details.oddsB;
     const awayOdds = details.homeIs === "A" ? details.oddsB : details.oddsA;
+    const startLabel = details.start_time ? new Date(details.start_time).toLocaleString() : "immediately";
+    const ok = await confirm({
+      title: "Post this match?",
+      description: `${homeName} (${homeOdds}) vs ${awayName} (${awayOdds}) · Draw ${details.draw} · Start ${startLabel} · CS market: ${csEnabled ? `${csRows.length} scores` : "off"} · Featured: ${details.featured ? "Yes" : "No"}. Double-check before posting — users see this immediately.`,
+      confirmText: "Post match", cancelText: "Review again",
+    });
+    if (!ok) return;
     const { data: m, error } = await supabase.from("matches").insert({
       name: details.name || `${homeName} vs ${awayName}`,
       home_team_id, away_team_id,
       start_time: details.start_time ? new Date(details.start_time).toISOString() : new Date().toISOString(),
       location: details.location, status: "scheduled",
       category_id: details.category_id || null, is_featured: details.featured,
+      featured_image_url: details.featured ? details.featured_image_url : null,
+      featured_image_fit: details.featured_image_fit, featured_image_position: details.featured_image_position,
       home_present: details.homePresent, away_present: details.awayPresent, restrict_repeat_contender: details.restrictRepeat,
-      featured_bg_url: details.featuredBgUrl || null,
-    } as any).select().single();
+    }).select().single();
     if (error) { toast.error(error.message); return; }
-    if (details.featured && details.featuredBgFile && m?.id) {
-      const ext = details.featuredBgFile.name.split(".").pop() || "jpg";
-      const path = `match-${m.id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("ads").upload(path, details.featuredBgFile, { upsert: true });
-      if (!upErr) {
-        const url = supabase.storage.from("ads").getPublicUrl(path).data.publicUrl;
-        await (supabase as any).from("matches").update({ featured_bg_url: url }).eq("id", m.id);
-      }
-    }
     const { data: market } = await supabase.from("markets").insert({ match_id: m.id, name: "Match Winner" }).select().single();
     if (market) {
       await supabase.from("odds").insert([
@@ -1966,17 +2343,20 @@ function MatchWizard({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Match Wizard — Step {step} of 5</DialogTitle>
+          <DialogTitle>Create Team Match</DialogTitle>
         </DialogHeader>
 
-        {step === 1 && <TeamStep label="Team A" team={teamA} setTeam={setTeamA} teams={teams} />}
-        {step === 2 && <TeamStep label="Team B" team={teamB} setTeam={setTeamB} teams={teams} />}
-        {step === 3 && (
-          <div className="space-y-3">
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="glass p-4"><TeamStep label="Team A" team={teamA} setTeam={setTeamA} teams={teams} /></Card>
+            <Card className="glass p-4"><TeamStep label="Team B" team={teamB} setTeam={setTeamB} teams={teams} /></Card>
+          </div>
+
+          <Card className="glass p-4 space-y-3">
             <div className="text-sm font-bold">Match Details & Odds</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid md:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Home / Away</label>
                 <Select value={details.homeIs} onValueChange={(v) => setDetails({ ...details, homeIs: v as any })}>
@@ -1998,10 +2378,9 @@ function MatchWizard({ onClose }: { onClose: () => void }) {
               <div><label className="text-xs">Draw odds</label><Input type="number" step="0.01" value={details.draw} onChange={(e) => setDetails({ ...details, draw: Number(e.target.value) })} /></div>
               <div><label className="text-xs">Team B win odds</label><Input type="number" step="0.01" value={details.oddsB} onChange={(e) => setDetails({ ...details, oddsB: Number(e.target.value) })} /></div>
             </div>
-          </div>
-        )}
-        {step === 4 && (
-          <div className="space-y-3">
+          </Card>
+
+          <Card className="glass p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-bold flex items-center gap-2"><Trophy className="h-4 w-4 text-primary" />Correct Score Market</div>
               <label className="flex items-center gap-2 text-xs"><Switch checked={csEnabled} onCheckedChange={setCsEnabled} /> Enable</label>
@@ -2037,41 +2416,43 @@ function MatchWizard({ onClose }: { onClose: () => void }) {
                 </div>
               </>
             )}
-          </div>
-        )}
-        {step === 5 && (
-          <div className="space-y-3">
+          </Card>
+
+          <Card className="glass p-4 space-y-3">
             <div className="text-sm font-bold">Final Settings</div>
-            <Input placeholder="Match name (e.g. Round 14 · Night Hunt)" value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} />
-            <div>
-              <label className="text-xs text-muted-foreground">Countdown / Start time</label>
-              <Input type="datetime-local" value={details.start_time} onChange={(e) => setDetails({ ...details, start_time: e.target.value })} />
+            <div className="grid md:grid-cols-3 gap-3">
+              <Input placeholder="Match name (e.g. Round 14 · Night Hunt)" value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} />
+              <div>
+                <label className="text-xs text-muted-foreground">Countdown / Start time</label>
+                <Input type="datetime-local" value={details.start_time} onChange={(e) => setDetails({ ...details, start_time: e.target.value })} />
+              </div>
+              <Input placeholder="Location / Venue" value={details.location} onChange={(e) => setDetails({ ...details, location: e.target.value })} />
             </div>
-            <Input placeholder="Location / Venue" value={details.location} onChange={(e) => setDetails({ ...details, location: e.target.value })} />
             <label className="flex items-center gap-2 text-sm"><Switch checked={details.featured} onCheckedChange={(v) => setDetails({ ...details, featured: v })} /> Publish on homepage as Featured</label>
             {details.featured && (
-              <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                <label className="text-[11px] uppercase tracking-widest text-primary font-bold">Featured background image (optional)</label>
-                <p className="text-[11px] text-muted-foreground">Shown behind this specific match in the homepage Featured Matches carousel.</p>
-                <Input type="file" accept="image/*" onChange={(e) => setDetails({ ...details, featuredBgFile: e.target.files?.[0] ?? null })} />
-                <Input placeholder="…or paste a direct image URL" value={details.featuredBgUrl} onChange={(e) => setDetails({ ...details, featuredBgUrl: e.target.value })} />
-              </div>
+              <ImageSettingControl
+                label="Featured match image (optional)"
+                value={details.featured_image_url}
+                onChange={(url) => setDetails({ ...details, featured_image_url: url })}
+                fit={details.featured_image_fit}
+                onFitChange={(v) => setDetails({ ...details, featured_image_fit: v })}
+                position={details.featured_image_position}
+                onPositionChange={(v) => setDetails({ ...details, featured_image_position: v })}
+                aspect="16 / 9"
+                help="Shown as the backdrop of this specific match in the home page Featured section (when no Seasonal Tournament is active)."
+              />
             )}
             <div className="grid grid-cols-2 gap-2">
               <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3 text-sm"><Switch checked={details.homePresent} onCheckedChange={(v) => setDetails({ ...details, homePresent: v })} /> Home team present (counts on Leaderboard)</label>
               <label className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-3 text-sm"><Switch checked={details.awayPresent} onCheckedChange={(v) => setDetails({ ...details, awayPresent: v })} /> Away team present (counts on Leaderboard)</label>
             </div>
             <label className="flex items-center gap-2 rounded-lg border border-accent/20 bg-card/60 p-3 text-sm"><Switch checked={details.restrictRepeat} onCheckedChange={(v) => setDetails({ ...details, restrictRepeat: v })} /> Restrict repeat bets — one bet per contender on this match</label>
-          </div>
-        )}
+          </Card>
+        </div>
 
-        <DialogFooter className="flex justify-between">
-          <Button variant="outline" disabled={step === 1} onClick={() => setStep(step - 1)}><ChevronLeft className="h-4 w-4" />Back</Button>
-          {step < 5 ? (
-            <Button onClick={() => setStep(step + 1)}>Next<ChevronRight className="h-4 w-4" /></Button>
-          ) : (
-            <Button className="btn-luxury" onClick={finalCreate}>Create Match</Button>
-          )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button className="btn-luxury" onClick={finalCreate}>Review & Create Match</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -2116,7 +2497,7 @@ function EventsPanel() {
   useEffect(() => { load(); }, []);
 
   async function create() {
-    if (!draft.title || !draft.ends_at) { toast.error("Title and end time required"); return; }
+    if (!draft.title) { toast.error("Title required"); return; }
     let banner_url: string | null = null;
     if (draft.banner) {
       const path = `event-${crypto.randomUUID()}.${draft.banner.name.split(".").pop()}`;
@@ -2124,7 +2505,12 @@ function EventsPanel() {
       if (error) { toast.error(error.message); return; }
       banner_url = supabase.storage.from("ads").getPublicUrl(path).data.publicUrl;
     }
-    const { error } = await supabase.from("events").insert({ title: draft.title, description: draft.description, banner_url, ends_at: new Date(draft.ends_at).toISOString() });
+    const { error } = await supabase.from("events").insert({
+      title: draft.title,
+      description: draft.description,
+      banner_url,
+      ends_at: draft.ends_at ? new Date(draft.ends_at).toISOString() : null,
+    } as any);
     if (error) toast.error(error.message);
     else { setDraft({ title: "", description: "", ends_at: "", banner: null }); load(); logAudit("event_created", "event"); toast.success("Event posted"); }
   }
@@ -2141,7 +2527,8 @@ function EventsPanel() {
   return (
     <div className="space-y-3">
       <Card className="glass-strong p-4 space-y-2">
-        <div className="font-bold">Create event (bold countdown banner)</div>
+        <div className="font-bold">Create event banner</div>
+        <div className="text-xs text-muted-foreground">Leave the end time empty to show an image-only banner (no countdown, no "Upcoming Event" tag).</div>
         <Input placeholder="Title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
         <Textarea placeholder="Description (optional)" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
         <div>
@@ -2149,7 +2536,7 @@ function EventsPanel() {
           <Input type="file" accept="image/*" onChange={(e) => setDraft({ ...draft, banner: e.target.files?.[0] ?? null })} />
         </div>
         <div>
-          <label className="text-xs text-muted-foreground">Countdown ends at</label>
+          <label className="text-xs text-muted-foreground">Countdown ends at (optional)</label>
           <Input type="datetime-local" value={draft.ends_at} onChange={(e) => setDraft({ ...draft, ends_at: e.target.value })} />
         </div>
         <Button className="btn-luxury" onClick={create}>Post Event</Button>
@@ -2161,7 +2548,7 @@ function EventsPanel() {
             {e.banner_url && <img src={e.banner_url} alt="" className="h-12 w-20 rounded object-cover" />}
             <div className="flex-1 min-w-0">
               <div className="font-bold truncate">{e.title}</div>
-              <div className="text-xs text-muted-foreground">Ends {new Date(e.ends_at).toLocaleString()}</div>
+              <div className="text-xs text-muted-foreground">{e.ends_at ? `Ends ${new Date(e.ends_at).toLocaleString()}` : "No countdown"}</div>
             </div>
             <Button size="sm" variant="outline" onClick={() => toggle(e.id, !e.is_active)}>{e.is_active ? "Hide" : "Show"}</Button>
             <Button size="sm" variant="destructive" onClick={() => del(e.id)}><Trash2 className="h-3 w-3" /></Button>
@@ -2482,7 +2869,7 @@ function HighlightsPanel() {
     if (error) { toast.error(error.message); return; }
     const url = supabase.storage.from("highlights").getPublicUrl(path).data.publicUrl;
     const media_type = draft.file.type.startsWith("video") ? "video" : "image";
-    await supabase.from("highlights").insert({ title: draft.title, media_url: url, media_type });
+    await supabase.from("highlights").insert({ title: draft.title, media_url: url, media_type, is_active: true });
     setDraft({ title: "", file: null }); load();
   }
   async function del(id: string) { await supabase.from("highlights").delete().eq("id", id); load(); }
@@ -2516,17 +2903,15 @@ function HighlightsPanel() {
 
 function AdsPanel() {
   const [list, setList] = useState<any[]>([]);
-  const [draft, setDraft] = useState({ title: "", link_url: "", file: null as File | null });
+  const [draft, setDraft] = useState({ title: "", description: "", link_url: "", image_url: "", placement: "all", image_fit: "cover", image_position: "center", display_order: 0 });
   async function load() { setList((await supabase.from("advertisements").select("*").order("created_at", { ascending: false })).data ?? []); }
   useEffect(() => { load(); }, []);
   async function add() {
-    if (!draft.file) { toast.error("Image required"); return; }
-    const path = `ad-${crypto.randomUUID()}.${draft.file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("ads").upload(path, draft.file);
+    if (!draft.image_url) { toast.error("Image required"); return; }
+    const placement = draft.placement === "all" ? "all" : `/${draft.placement.replace(/^\/+|\/+$/g, "")}`;
+    const { error } = await supabase.from("advertisements").insert({ ...draft, placement, link_url: draft.link_url || null } as any);
     if (error) { toast.error(error.message); return; }
-    const url = supabase.storage.from("ads").getPublicUrl(path).data.publicUrl;
-    await supabase.from("advertisements").insert({ title: draft.title, image_url: url, link_url: draft.link_url || null });
-    setDraft({ title: "", link_url: "", file: null }); load();
+    setDraft({ title: "", description: "", link_url: "", image_url: "", placement: "all", image_fit: "cover", image_position: "center", display_order: 0 }); load();
   }
   async function del(id: string) { await supabase.from("advertisements").delete().eq("id", id); load(); }
   async function toggle(id: string, v: boolean) { await supabase.from("advertisements").update({ is_active: v }).eq("id", id); load(); }
@@ -2534,15 +2919,20 @@ function AdsPanel() {
     <div className="space-y-3">
       <Card className="glass-strong p-4 space-y-2">
         <Input placeholder="Title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+        <Textarea placeholder="Description (optional)" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
         <Input placeholder="Link URL (optional)" value={draft.link_url} onChange={(e) => setDraft({ ...draft, link_url: e.target.value })} />
-        <Input type="file" accept="image/*" onChange={(e) => setDraft({ ...draft, file: e.target.files?.[0] ?? null })} />
+        <p className="text-xs text-muted-foreground">These are bottom-of-page advertisements. Homepage top banners remain managed separately under Home Banners.</p>
+        <div className="grid gap-2 md:grid-cols-2"><Select value={draft.placement} onValueChange={(placement) => setDraft({ ...draft, placement })}><SelectTrigger><SelectValue placeholder="Choose page" /></SelectTrigger><SelectContent><SelectItem value="all">Every page</SelectItem><SelectItem value="/">Home page bottom</SelectItem><SelectItem value="/matches">Matches</SelectItem><SelectItem value="/leaderboard">Leaderboard</SelectItem><SelectItem value="/dashboard">Dashboard</SelectItem><SelectItem value="/wagers">Wagers</SelectItem><SelectItem value="/virtual">Virtual</SelectItem><SelectItem value="/lottery">Lottery</SelectItem><SelectItem value="/arcade">Arcade</SelectItem><SelectItem value="/shop">Shop</SelectItem><SelectItem value="/tournament">Tournament</SelectItem><SelectItem value="/chat">Chat</SelectItem><SelectItem value="/referrals">Referrals</SelectItem><SelectItem value="/profile">Profile</SelectItem><SelectItem value="/settings">Settings</SelectItem><SelectItem value="/support">Support</SelectItem></SelectContent></Select><Input type="number" placeholder="Display order" value={draft.display_order} onChange={(e) => setDraft({ ...draft, display_order: Number(e.target.value) })} /></div>
+        <Input placeholder="Or enter any page path, e.g. /quests" value={draft.placement === "all" ? "" : draft.placement} onChange={(e) => setDraft({ ...draft, placement: e.target.value.trim().toLowerCase() || "all" })} />
+        <ImageSettingControl label="Advertisement image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url ?? "" })} fit={draft.image_fit} onFitChange={(image_fit) => setDraft({ ...draft, image_fit })} position={draft.image_position} onPositionChange={(image_position) => setDraft({ ...draft, image_position })} aspect="2 / 1" help="Crop to a wide promotional card like the reference row." />
         <Button className="btn-luxury" onClick={add}>Add advertisement</Button>
       </Card>
       <div className="grid sm:grid-cols-2 gap-2">
         {list.map((a) => (
           <Card key={a.id} className="glass p-2">
-            <img src={a.image_url} className="w-full h-32 object-cover rounded" alt="" />
+            <img src={a.image_url} className="w-full h-32 rounded" style={{ objectFit: a.image_fit || "cover", objectPosition: a.image_position || "center" }} alt="" />
             <div className="font-bold text-sm mt-1 truncate">{a.title}</div>
+            <div className="text-xs text-muted-foreground">{a.placement === "all" ? "Every page" : a.placement}</div>
             <div className="flex gap-1 mt-1">
               <Button size="sm" variant="outline" onClick={() => toggle(a.id, !a.is_active)}>{a.is_active ? "Hide" : "Show"}</Button>
               <Button size="sm" variant="destructive" onClick={() => del(a.id)}><Trash2 className="h-3 w-3" /></Button>
@@ -2600,8 +2990,24 @@ function TicketsPanel() {
     setTickets((t) => t.map((x) => x.id === id ? { ...x, status } : x));
   }
   async function del(id: string) {
-    if (!await confirm({ title: "Delete ticket?", tone: "danger", confirmText: "Delete" })) return;
-    await supabase.from("support_tickets").delete().eq("id", id);
+    const ticket = tickets.find((x) => x.id === id);
+    if (ticket?.status !== "closed") {
+      toast.error("Close the ticket first", { description: "Only closed support conversations can be permanently deleted." });
+      return;
+    }
+    if (!await confirm({ title: "Delete closed ticket?", description: "This permanently removes the support conversation and its replies.", tone: "danger", confirmText: "Delete forever" })) return;
+
+    const { error: messageError } = await supabase.from("ticket_messages").delete().eq("ticket_id", id);
+    if (messageError) {
+      toast.error("Could not delete replies", { description: messageError.message });
+      return;
+    }
+    const { error } = await supabase.from("support_tickets").delete().eq("id", id);
+    if (error) {
+      toast.error("Could not delete ticket", { description: error.message });
+      return;
+    }
+    toast.success("Closed support ticket deleted");
     setTickets((t) => t.filter((x) => x.id !== id));
   }
   return (
@@ -2625,7 +3031,15 @@ function TicketsPanel() {
             <SelectContent>{["open", "in_progress", "resolved", "closed"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
           </Select>
           <Button size="sm" variant="outline" onClick={() => setActive(t)}><Eye className="h-3 w-3 mr-1" />Reply</Button>
-          <Button size="sm" variant="destructive" onClick={() => del(t.id)}><Trash2 className="h-3 w-3" /></Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={t.status !== "closed"}
+            title={t.status === "closed" ? "Delete closed ticket" : "Close the ticket before deleting it"}
+            onClick={() => del(t.id)}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </Card>
       ))}
       {active && <AdminTicketDialog ticket={active} onClose={() => { setActive(null); load(); }} />}
@@ -2665,9 +3079,21 @@ function AdminTicketDialog({ ticket, onClose }: { ticket: any; onClose: () => vo
   }
   async function updateStatus(status: string) { await supabase.from("support_tickets").update({ status: status as any }).eq("id", ticket.id); toast.success("Ticket updated"); onClose(); }
   async function deleteTicket() {
-    if (!await confirm({ title: "Delete this support ticket?", description: "All replies and uploaded references on this report will be removed.", tone: "danger", confirmText: "Delete forever" })) return;
-    await supabase.from("ticket_messages").delete().eq("ticket_id", ticket.id);
-    await supabase.from("support_tickets").delete().eq("id", ticket.id);
+    if (ticket.status !== "closed") {
+      toast.error("Close the ticket first", { description: "Only closed support conversations can be permanently deleted." });
+      return;
+    }
+    if (!await confirm({ title: "Delete this closed support ticket?", description: "All replies and uploaded references on this report will be removed.", tone: "danger", confirmText: "Delete forever" })) return;
+    const { error: messageError } = await supabase.from("ticket_messages").delete().eq("ticket_id", ticket.id);
+    if (messageError) {
+      toast.error("Could not delete replies", { description: messageError.message });
+      return;
+    }
+    const { error } = await supabase.from("support_tickets").delete().eq("id", ticket.id);
+    if (error) {
+      toast.error("Could not delete ticket", { description: error.message });
+      return;
+    }
     toast.success("Ticket deleted"); onClose();
   }
   return (
@@ -3026,6 +3452,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 /* ============================ ANALYTICS ============================ */
 function AnalyticsPanel() {
   const nav = useNavigate();
+  const { isAdmin } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [series, setSeries] = useState<any[]>([]);
   const [counts, setCounts] = useState<any>({});
@@ -3034,6 +3461,27 @@ function AnalyticsPanel() {
   const [broadcasts, setBroadcasts] = useState<any[]>([]);
   const [event, setEvent] = useState<any>(null);
   const [highlights, setHighlights] = useState<any[]>([]);
+  const [arenaImg, setArenaImg] = useState<string | null>(null);
+  const [arenaFit, setArenaFit] = useState<string>("cover");
+  const [arenaPos, setArenaPos] = useState<string>("center");
+
+  useEffect(() => {
+    const loadArena = () => {
+      supabase.from("app_settings").select("league_arena_url,league_arena_fit,league_arena_position").eq("id", 1).maybeSingle()
+        .then(({ data, error }) => {
+          if (error) { console.error("league_arena fetch failed:", error.message); return; }
+          setArenaImg((data as any)?.league_arena_url ?? null);
+          setArenaFit((data as any)?.league_arena_fit ?? "cover");
+          setArenaPos((data as any)?.league_arena_position ?? "center");
+        });
+    };
+    loadArena();
+    const arenaCh = supabase
+      .channel("admin-league-arena")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.1" }, loadArena)
+      .subscribe();
+    return () => { supabase.removeChannel(arenaCh); };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -3042,7 +3490,7 @@ function AnalyticsPanel() {
         supabase.from("bets").select("status, stake, potential_payout, created_at"),
         supabase.from("token_transactions").select("amount, kind, created_at"),
         supabase.from("token_requests").select("status, amount"),
-        supabase.from("matches").select("id,name,status,created_at,home_team:teams!home_team_id(name,logo_url),away_team:teams!away_team_id(name,logo_url)").eq("is_virtual", false).in("status", ["live", "scheduled"]).limit(5),
+        supabase.from("matches").select("id,name,status,created_at,home_score,away_score,home_team:teams!home_team_id(name,logo_url),away_team:teams!away_team_id(name,logo_url)").eq("is_virtual", false).in("status", ["live", "scheduled"]).limit(5),
         supabase.from("token_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("promo_code_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -3119,39 +3567,44 @@ function AnalyticsPanel() {
     return String(n);
   };
 
-  const goTab = (t: string) => setActiveTabFromAnalytics(nav, t);
+  // Tabs moderators are allowed to open (must match modOk items in AdminSidebar.tsx).
+  const MOD_SAFE_TABS = new Set(["analytics", "users", "appeals", "chat", "tickets", "matches", "topbets", "withdrawals", "content", "spotlights", "notify"]);
+  const goTab = (t: string) => {
+    if (!isAdmin && !MOD_SAFE_TABS.has(t)) return;
+    setActiveTabFromAnalytics(nav, t);
+  };
   const row1 = [
-    { icon: Users, value: stats.totalUsers, title: "USERS", sub: "TOTAL USERS", tone: "gold", onClick: () => goTab("users") },
-    { icon: Trophy, value: counts.gangWars ?? 0, title: "GANG WARS", sub: "LIVE & UPCOMING", tone: "gold", onClick: () => goTab("matches") },
-    { icon: AlertTriangle, value: counts.pendingTotal ?? 0, title: "PENDING REQUESTS", sub: "AWAITING ACTION", tone: "amber", onClick: () => goTab("tokens") },
-    { icon: Coins, value: short(stats.circulating), title: "TOTAL VOLUME", sub: "IN CIRCULATION", tone: "gold-lg" },
-    { icon: Calendar, value: counts.openTickets ?? 0, title: "OPEN REPORTS", sub: "REPORTED ITEMS", tone: "gold", onClick: () => goTab("tickets") },
+    { icon: Users, value: stats.totalUsers, title: "TOTAL USERS", sub: "FROM LAST WEEK", tone: "gold", onClick: () => goTab("users") },
+    { icon: Gamepad2, value: counts.gangWars ?? 0, title: "GAMES PLAYED", sub: "LIVE MATCHES", tone: "gold", onClick: () => goTab("matches") },
+    { icon: ClipboardList, value: counts.pendingTotal ?? 0, title: "PENDING REQUESTS", sub: "WAITING REVIEW", tone: "amber", onClick: () => goTab("tokens") },
+    { icon: Coins, value: short(stats.circulating), title: "TOTAL VOLUME", sub: "TODAY'S VOLUME", tone: "gold-lg", onClick: () => goTab("pnl") },
+    { icon: Swords, value: counts.openTickets ?? 0, title: "OPEN DISPUTES", sub: "WAITING ACTION", tone: "gold", onClick: () => goTab("tickets") },
   ];
   const row2 = [
-    { icon: Ticket, value: counts.bookedTickets ?? 0, title: "TICKETS BOOKED", sub: "TOTAL BOOKED", onClick: () => goTab("bettracker") },
-    { icon: Coins, value: counts.pendingTokens ?? 0, title: "TOKEN REQUESTS", sub: "REQUESTED TOKENS", onClick: () => goTab("tokens") },
-    { icon: Wallet, value: counts.pendingWithdrawals ?? 0, title: "WITHDRAWALS", sub: "PENDING PAYOUTS", onClick: () => goTab("withdrawals") },
-    { icon: Tag, value: counts.pendingPromos ?? 0, title: "PROMO REQUESTS", sub: "PENDING PROMOS", onClick: () => goTab("promoreqs") },
-    { icon: AlertTriangle, value: counts.pendingAppeals ?? 0, title: "BAN APPEALS", sub: "PENDING APPEALS", onClick: () => goTab("appeals") },
+    { icon: Ticket, value: counts.openTickets ?? 0, title: "TICKETS PENDING", sub: "NEED RESPONSE", onClick: () => goTab("tickets") },
+    { icon: Megaphone, value: counts.pendingPromos ?? 0, title: "PROMO REQUESTS", sub: "PENDING TODAY", onClick: () => goTab("promoreqs") },
+    { icon: Wallet, value: counts.pendingWithdrawals ?? 0, title: "WITHDRAWALS", sub: "PENDING APPROVAL", onClick: () => goTab("withdrawals") },
+    { icon: Coins, value: counts.pendingTokens ?? 0, title: "PENDING DEPOSITS", sub: "PENDING APPROVAL", onClick: () => goTab("tokens") },
+    { icon: Users, value: counts.pendingAppeals ?? 0, title: "DAILY REFERRALS", sub: "FROM ALL SOURCES", onClick: () => goTab("referrals") },
   ];
   const row4 = [
-    { icon: Users, value: stats.totalUsers, title: "TOTAL USERS", onClick: () => goTab("users") },
+    { icon: Users, value: stats.totalUsers, title: "TOTAL LOGINS", onClick: () => goTab("users") },
     { icon: Shield, value: stats.bannedUsers, title: "BANNED USERS", onClick: () => goTab("bannedusers") },
-    { icon: Coins, value: short(stats.circulating), title: "TOKENS CIRCULATING", onClick: () => goTab("pnl") },
+    { icon: Coins, value: short(stats.circulating), title: "TOTAL CIRCULATING", onClick: () => goTab("pnl") },
     { icon: Ticket, value: stats.totalBets, title: "TOTAL BETS", onClick: () => goTab("bettracker") },
-    { icon: Trophy, value: stats.wonBets, title: "WON BETS", onClick: () => goTab("wonbets") },
+    { icon: Trophy, value: stats.wonBets, title: "WIN BETS", onClick: () => goTab("wonbets") },
   ];
   const row5 = [
     { icon: X, value: stats.lostBets, title: "LOST BETS", onClick: () => goTab("lostbets") },
     { icon: Eye, value: stats.openBets, title: "OPEN BETS", onClick: () => goTab("bettracker") },
-    { icon: Coins, value: short(stats.totalStaked), title: "TOTAL STAKED", onClick: () => goTab("pnl") },
+    { icon: Coins, value: short(stats.totalStaked), title: "TOTAL STAKES", onClick: () => goTab("pnl") },
     { icon: Wallet, value: short(stats.totalPaid), title: "TOTAL PAID OUT", onClick: () => goTab("pnl") },
-    { icon: BarChart3, value: short(stats.houseEdge), title: "NET (HOUSE)", onClick: () => goTab("pnl") },
+    { icon: BarChart3, value: short(stats.houseEdge), title: "POT MONEY", onClick: () => goTab("pnl") },
   ];
   const row6 = [
-    { icon: Check, value: short(stats.approvedRequests), title: "TOKENS APPROVED", onClick: () => goTab("tokens") },
-    { icon: Coins, value: short(stats.credits), title: "TOKEN CREDITS", onClick: () => goTab("tokenmovement") },
-    { icon: Coins, value: short(stats.debits), title: "TOKEN DEBITS", onClick: () => goTab("tokenmovement") },
+    { icon: Check, value: short(stats.approvedRequests), title: "TICKETS APPROVED", onClick: () => goTab("tokens") },
+    { icon: Coins, value: short(stats.credits), title: "TODAY DEPOSITS", onClick: () => goTab("tokenmovement") },
+    { icon: Coins, value: short(stats.debits), title: "TODAY WITHDRAWALS", onClick: () => goTab("tokenmovement") },
   ];
 
   const ts = (ts: string) => {
@@ -3165,12 +3618,12 @@ function AnalyticsPanel() {
   return (
     <div className="space-y-3">
       {/* ROW 1 — 5 metric squares */}
-      <div className="grid grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {row1.map((x) => <MetricSquare key={x.title} {...x} />)}
       </div>
 
       {/* ROW 2 — 5 metric squares */}
-      <div className="grid grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {row2.map((x) => <MetricSquare key={x.title} {...x} />)}
       </div>
 
@@ -3209,137 +3662,163 @@ function AnalyticsPanel() {
       </div>
 
       {/* ROW 4 — 5 metric squares */}
-      <div className="grid grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {row4.map((x) => <MetricSquare key={x.title} {...x} compact />)}
       </div>
 
       {/* ROW 5 — 5 metric squares */}
-      <div className="grid grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {row5.map((x) => <MetricSquare key={x.title} {...x} compact />)}
       </div>
 
-      {/* ROW 6 — 3 wider squares + image cell */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      {/* ROW 6 — 3 wider squares + system logs cell */}
+      <div className="grid grid-cols-4 gap-3">
         {row6.map((x) => <MetricSquare key={x.title} {...x} compact />)}
-        <Card className="overflow-hidden border-primary/20 bg-card/60 relative min-h-[80px] group">
-          <img src={leagueSkullFire} alt="League" loading="lazy" width={512} height={512}
-               className="absolute inset-0 h-full w-full object-cover scale-110 animate-pulse-glow group-hover:scale-125 transition-transform duration-[3000ms]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-          <div className="absolute inset-x-0 bottom-1 text-center text-[10px] uppercase tracking-widest text-white font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">League</div>
-        </Card>
+        <button type="button" onClick={() => goTab("audit")} className="relative overflow-hidden rounded-xl border border-primary/30 bg-card/60 min-h-[46px] sm:min-h-[58px] group">
+          <img src={leagueSkullFire} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-[3000ms]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+          <span className="absolute inset-x-0 bottom-1 text-center text-[7px] sm:text-[9px] font-black uppercase tracking-widest text-white drop-shadow">View System Logs</span>
+        </button>
       </div>
 
-      {/* ROW 7 — Recent Activity | Live Gang Wars + Event Countdown | Highlights Hub */}
-      <div className="grid grid-cols-[1.15fr_0.9fr_1.35fr] gap-3">
-        <PanelBlock title="RECENT ACTIVITY" accent="sky" count={activity.length} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "activity")}>
-          {activity.length === 0 && <div className="text-[10px] text-muted-foreground">No activity yet</div>}
-          {activity.slice(0, 5).map((a, i) => (
-            <button key={i} onClick={() => setActiveTabFromAnalytics(nav, "audit")} className="w-full text-left flex items-start gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-sky-500/10 rounded transition">
-              <Sparkles className="h-3 w-3 text-sky-400 shrink-0 mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <div className="text-foreground truncate">{a.action?.replace(/_/g, " ")}</div>
-                <div className="text-muted-foreground text-[8px] sm:text-[10px]">{ts(a.created_at)}</div>
+      {/* ROW 7 — Broadcast Center | Live Game Stats | League Arena
+          Two-column layout: left column carries Broadcast + Live Game Stats
+          side-by-side, then the 6 module tiles beneath them; right column is
+          the League Arena banner, stretched to match the left column's full
+          height. On mobile this reflows to a single column: Broadcast, Live
+          Stats, League Arena, then the tiles as a readable 6-across grid. */}
+      <div className="grid grid-cols-3 gap-3">
+        {/* LEFT COLUMN — Broadcast + Live Stats row, then tiles */}
+        <div className="col-span-2 flex flex-col gap-3 order-1">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Broadcast Center */}
+            <Card className="border-primary/25 bg-card/70 p-2.5 flex flex-col">
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-primary">Broadcast Center</span>
+                <span className="rounded-full bg-emerald-500/20 px-1.5 py-px text-[7px] font-black uppercase tracking-widest text-emerald-300">New</span>
+                <button onClick={() => goTab("broadcast")} className="ml-auto text-muted-foreground hover:text-primary"><X className="h-3 w-3" /></button>
               </div>
-            </button>
-          ))}
-        </PanelBlock>
-        <div className="space-y-3">
-          <PanelBlock title="LIVE GANG WARS" accent="rose" compact count={liveMatches.length} hideWhenEmpty onView={() => nav({ to: "/matches" })}>
-            {liveMatches.length === 0 && <div className="text-[10px] text-muted-foreground">No live wars</div>}
-            {liveMatches.slice(0, 2).map((m: any) => {
-              const home = m.home_team; const away = m.away_team;
-              const initial = (n?: string) => (n ? n.charAt(0).toUpperCase() : "?");
-              return (
-                <button key={m.id} onClick={() => nav({ to: "/matches/$matchId", params: { matchId: m.id } })} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-rose-500/10 rounded px-1 transition">
-                  {home?.logo_url ? <img src={home.logo_url} alt="" className="h-5 w-5 rounded-full object-cover border border-rose-500/40" /> : <div className="h-5 w-5 rounded-full bg-rose-500/20 grid place-items-center text-[8px] font-bold text-rose-300 border border-rose-500/40">{initial(home?.name)}</div>}
-                  <div className="flex-1 min-w-0 text-center text-foreground font-semibold truncate">{home?.name ?? "Home"} <span className="text-muted-foreground">vs</span> {away?.name ?? "Away"}</div>
-                  {away?.logo_url ? <img src={away.logo_url} alt="" className="h-5 w-5 rounded-full object-cover border border-rose-500/40" /> : <div className="h-5 w-5 rounded-full bg-rose-500/20 grid place-items-center text-[8px] font-bold text-rose-300 border border-rose-500/40">{initial(away?.name)}</div>}
+              <div className="flex-1 space-y-2">
+                {broadcasts.length === 0 && <div className="text-[10px] text-muted-foreground">No broadcasts yet</div>}
+                {broadcasts.slice(0, 2).map((b) => (
+                  <button key={b.id} onClick={() => goTab("broadcast")} className="w-full rounded-lg border border-primary/15 bg-background/40 p-2 text-left hover:bg-primary/5 transition">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="truncate text-[10px] sm:text-xs"><span className="text-muted-foreground">Title: </span><span className="font-semibold text-foreground">{b.title || "Broadcast"}</span></div>
+                      <div className="shrink-0 text-[7px] sm:text-[9px] text-muted-foreground">{ts(b.created_at)}</div>
+                    </div>
+                    {b.body && <div className="mt-1 text-[9px] sm:text-[11px] text-muted-foreground line-clamp-2"><span className="uppercase tracking-widest text-[7px]">Message: </span>{b.body}</div>}
+                    <div className="mt-1 text-[8px] sm:text-[10px] text-muted-foreground">Sent By: {isAdmin ? "Super Admin" : "Admin"}</div>
+                  </button>
+                ))}
+              </div>
+              <Button size="sm" variant="outline" className="mt-2 h-7 w-full border-primary/40 text-[9px] uppercase tracking-widest text-primary" onClick={() => goTab("broadcast")}>View All Broadcasts</Button>
+            </Card>
+
+            {/* Live Game Stats */}
+            <Card className="border-primary/25 bg-card/70 p-2.5 flex flex-col">
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-primary">Live Game Stats</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/90 px-1.5 py-px text-[7px] font-black uppercase tracking-widest text-destructive-foreground">
+                  <span className="h-1 w-1 rounded-full bg-white animate-ping" />Live
+                </span>
+                <button onClick={() => nav({ to: "/matches" })} className="ml-auto text-[8px] sm:text-[10px] text-muted-foreground hover:text-primary">View All ›</button>
+              </div>
+              <div className="flex-1 space-y-2">
+                {liveMatches.length === 0 && <div className="text-[10px] text-muted-foreground">No live games</div>}
+                {liveMatches.slice(0, 3).map((m: any) => (
+                  <button key={m.id} onClick={() => nav({ to: "/matches/$matchId", params: { matchId: m.id } })}
+                    className="flex w-full items-center gap-2 rounded-lg border border-primary/20 bg-background/40 px-2 py-2 hover:border-primary/50 hover:bg-primary/5 transition">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-destructive/50 bg-destructive/15 text-[6px] font-black uppercase text-destructive">Live</span>
+                    <span className="flex-1 truncate text-center text-[10px] sm:text-xs font-bold uppercase tracking-wide text-foreground">
+                      {m.home_team?.name ?? "Home"} <span className="text-muted-foreground">vs</span> {m.away_team?.name ?? "Away"}
+                    </span>
+                    <span className="shrink-0 text-[11px] sm:text-sm font-black tabular-nums text-primary">{m.home_score ?? 0} - {m.away_score ?? 0}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Module tiles — always 6-across in a single row (desktop-forced layout means
+              this never needs a mobile-specific 3-across fallback anymore). */}
+          <div className="grid grid-cols-6 gap-2 sm:gap-3">
+            {[
+              { l: "VIRTUAL STADIUM", s: "Manage virtual matches and events", t: "virtual", img: tileVirtualAsset.url },
+              { l: "BATTLE ARENA", s: "Manage real-time tournaments", t: "matches", img: tileBattleAsset.url },
+              { l: "CHALLENGES", s: "Create and manage challenges", t: "challenges", img: tileChallengesAsset.url },
+              { l: "REFERRALS", s: "Manage referral rewards", t: "referrals", img: tileReferrals },
+              { l: "USER REWARDS", s: "Manage user rewards and points", t: "users", img: tileUsersAsset.url },
+              { l: "CLANS", s: "Manage clans and tournaments", t: "clans", img: tileClansAsset.url },
+            ].filter((m) => isAdmin || MOD_SAFE_TABS.has(m.t)).map((m) => (
+              <Card key={m.l} className="border-primary/25 bg-card/60 p-1.5 sm:p-2 flex flex-col">
+                <button type="button" onClick={() => goTab(m.t)} className="relative aspect-[16/9] w-full mb-1 rounded-lg overflow-hidden border border-primary/25 hover:border-primary/60 transition active:scale-95">
+                  <img src={m.img} alt={m.l} loading="lazy" width={512} height={512} className="w-full h-full object-cover" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 </button>
-              );
-            })}
-          </PanelBlock>
-          <PanelBlock title="EVENT COUNTDOWN" compact count={event ? 1 : 0} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "events")}>
-            {event ? (
-              <button onClick={() => setActiveTabFromAnalytics(nav, "events")} className="relative w-full min-h-24 text-left rounded-lg p-2 transition space-y-1 overflow-hidden border border-primary/20 bg-card/50">
-                {event.banner_url ? <img src={event.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" /> : <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20" />}
-                <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/45 to-background/70" />
-                <div className="relative text-[9px] sm:text-xs font-bold text-primary truncate drop-shadow">{event.title}</div>
-                <div className="relative text-[10px] sm:text-sm font-mono text-amber-300 drop-shadow"><Countdown target={event.ends_at} /></div>
-                {event.description && <div className="relative text-[9px] text-muted-foreground line-clamp-1">{event.description}</div>}
-              </button>
-            ) : <div className="text-[10px] text-muted-foreground">No active event</div>}
-          </PanelBlock>
+                <div className="text-[7px] sm:text-[9px] font-black uppercase tracking-widest text-primary leading-tight text-center">{m.l}</div>
+                <div className="mt-0.5 text-[6px] sm:text-[8px] text-muted-foreground leading-tight text-center line-clamp-2">{m.s}</div>
+                <Button size="sm" variant="outline" className="mt-1.5 h-6 w-full border-primary/40 text-primary text-[7px] sm:text-[9px] uppercase tracking-widest" onClick={() => goTab(m.t)}>Access</Button>
+              </Card>
+            ))}
+          </div>
         </div>
-        <PanelBlock title="HIGHLIGHTS HUB" accent="violet" count={highlights.length} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "content")}>
-          {highlights.length === 0 && <div className="text-[10px] text-muted-foreground">No highlights yet</div>}
-          {highlights.slice(0, 4).map((h) => (
-            <button key={h.id} onClick={() => setActiveTabFromAnalytics(nav, "content")} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-violet-500/10 rounded px-1 transition">
-              {h.media_type === "video" ? <Play className="h-3 w-3 text-violet-400 shrink-0" /> : <ImageIcon className="h-3 w-3 text-violet-400 shrink-0" />}
-              <div className="min-w-0 flex-1 truncate text-left">{h.title}</div>
-              <span className="flex items-center gap-0.5 text-emerald-300 shrink-0"><ThumbsUp className="h-3 w-3" />{h.likes ?? 0}</span>
-              <span className="flex items-center gap-0.5 text-destructive shrink-0"><ThumbsDown className="h-3 w-3" />{h.dislikes ?? 0}</span>
-            </button>
-          ))}
-        </PanelBlock>
-      </div>
 
-      {/* ROW 8 — Broadcast Center | Quick Actions | Top Bets */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <PanelBlock title="BROADCAST CENTER" compact count={broadcasts.length} hideWhenEmpty onView={() => setActiveTabFromAnalytics(nav, "broadcast")}>
-          {broadcasts.length === 0 && <div className="text-[10px] text-muted-foreground">No broadcasts</div>}
-          {broadcasts.map((b) => (
-            <button key={b.id} onClick={() => setActiveTabFromAnalytics(nav, "broadcast")} className="w-full text-left text-[9px] sm:text-xs py-1 border-b border-primary/10 last:border-0 hover:bg-primary/5 rounded px-1 transition">
-              <div className="flex items-center gap-1"><Megaphone className="h-2.5 w-2.5 text-primary shrink-0" /><div className="truncate text-foreground font-semibold">{b.title || "Broadcast"}</div></div>
-              {b.body && <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate pl-3.5">{b.body}</div>}
-              <div className="text-[7px] sm:text-[9px] text-muted-foreground pl-3.5">{ts(b.created_at)}</div>
-            </button>
-          ))}
-        </PanelBlock>
-        <MiniLeaderboardPanel onOpen={() => setActiveTabFromAnalytics(nav, "leaderboard")} />
-        <TopBetsPanel limit={3} />
-      </div>
-
-      {/* ROW 9 — 5 module tiles */}
-      <div className="grid grid-cols-6 gap-3">
-        {[
-          { l: "VIRTUAL", s: "Manage virtual matches and rounds", t: "virtual", img: tileVirtualAsset.url },
-          { l: "BATTLE", s: "Manage matches, fixtures and outcomes", t: "matches", img: tileBattleAsset.url },
-          { l: "CHALLENGES", s: "Create and manage gang challenges", t: "challenges", img: tileChallengesAsset.url },
-          { l: "REFERRALS", s: "Manage referrals and commissions", t: "referrals", img: tileReferrals },
-          { l: "USERS", s: "Manage users, profiles and access", t: "users", img: tileUsersAsset.url },
-          { l: "CLANS", s: "Manage gangs, teams and players", t: "clans", img: tileClansAsset.url },
-        ].map((m) => (
-          <Card key={m.l} className="border-primary/20 bg-card/60 p-2 sm:p-3 flex flex-col">
-            <button type="button" onClick={() => setActiveTabFromAnalytics(nav, m.t)} className="relative aspect-square w-full mb-1 rounded overflow-hidden border border-primary/20 hover:border-primary/60 transition active:scale-95">
-              <img src={m.img} alt={m.l} loading="lazy" width={512} height={512} className="w-full h-full object-cover" />
-              <img src={lslLogo} alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 m-auto h-1/2 w-1/2 object-contain opacity-15 mix-blend-screen drop-shadow-[0_4px_18px_rgba(0,0,0,0.65)]" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-            </button>
-            <div className="text-[8px] sm:text-[10px] font-bold text-primary leading-tight">{m.l}</div>
-            <div className="text-[6px] sm:text-[8px] text-muted-foreground leading-tight mt-0.5 line-clamp-2">{m.s}</div>
-            <Button size="sm" variant="outline" className="mt-1 h-5 sm:h-6 text-[7px] sm:text-[9px] border-primary/40 text-primary px-1" onClick={() => setActiveTabFromAnalytics(nav, m.t)}>Manage</Button>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="border-primary/20 bg-card/60 p-3">
-        <div className="text-[10px] sm:text-xs font-bold tracking-widest text-primary mb-2">SYSTEM STATUS <span className="text-muted-foreground font-normal">(COMING SOON)</span></div>
-        <div className="grid grid-cols-5 gap-1 sm:gap-2">
-          {["Platform", "Database", "Payments", "Broadcast", "AI Engine"].map((s) => (
-            <div key={s} className="flex items-center justify-between gap-1 text-[8px] sm:text-[10px] px-1.5 py-1 rounded bg-background/40 border border-primary/10">
-              <span className="text-foreground truncate">{s}</span>
-              <span className="text-emerald-400 font-bold">●</span>
+        {/* RIGHT COLUMN — League Arena occupies the entire right column */}
+        <div className="flex flex-col order-2 h-full">
+          <Card className="group relative min-h-[380px] flex-1 h-full overflow-hidden border-primary/30 bg-card/60">
+            <img
+              src={arenaImg || leagueSkullFire}
+              alt="League arena"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full animate-[kenburns_18s_ease-in-out_infinite_alternate]"
+              style={{ objectFit: (arenaFit as any) || "cover", objectPosition: arenaPos || "center" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 animate-[shimmer-sweep_4s_linear_infinite]" />
+            <span className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full border border-destructive/50 bg-black/70 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-destructive">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping" />Live
+            </span>
+            <div className="absolute inset-x-0 bottom-0 p-3 text-center">
+              <div className="text-lg sm:text-2xl font-black uppercase tracking-[0.12em] text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">League Arena</div>
+              <div className="text-[8px] sm:text-[10px] uppercase tracking-[0.35em] text-primary">Compete. Win. Repeat.</div>
+              <Button size="sm" className="mt-2 h-7 rounded-full bg-gradient-gold px-4 text-[9px] font-black uppercase tracking-widest text-primary-foreground" onClick={() => nav({ to: "/matches" })}>
+                <Trophy className="mr-1 h-3 w-3" />Enter Arena
+              </Button>
             </div>
-          ))}
+          </Card>
         </div>
-      </Card>
+      </div>
 
-      {/* Quick actions moved to the bottom — 4 buttons per column, scrolls horizontally */}
-      <QuickActionsBar onOpen={(t) => setActiveTabFromAnalytics(nav, t)} />
+      {/* Event countdown — admin only */}
+      {isAdmin && event && (
+        <PanelBlock title="EVENT COUNTDOWN" compact count={1} onView={() => goTab("events")}>
+          <button onClick={() => goTab("events")} className="relative w-full min-h-24 text-left rounded-lg p-2 transition space-y-1 overflow-hidden border border-primary/20 bg-card/50">
+            {event.banner_url ? <img src={event.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" /> : <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20" />}
+            <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/45 to-background/70" />
+            <div className="relative text-[9px] sm:text-xs font-bold text-primary truncate drop-shadow">{event.title}</div>
+            <div className="relative text-[10px] sm:text-sm font-mono text-amber-300 drop-shadow"><Countdown target={event.ends_at} /></div>
+            {event.description && <div className="relative text-[9px] text-muted-foreground line-clamp-1">{event.description}</div>}
+          </button>
+        </PanelBlock>
+      )}
+
+      {/* Highlights hub */}
+      <PanelBlock title="HIGHLIGHTS HUB" accent="violet" count={highlights.length} hideWhenEmpty onView={() => goTab("content")}>
+        {highlights.slice(0, 4).map((h) => (
+          <button key={h.id} onClick={() => goTab("content")} className="w-full flex items-center gap-1.5 text-[9px] sm:text-xs py-1 border-b border-border/40 last:border-0 hover:bg-violet-500/10 rounded px-1 transition">
+            {h.media_type === "video" ? <Play className="h-3 w-3 text-violet-400 shrink-0" /> : <ImageIcon className="h-3 w-3 text-violet-400 shrink-0" />}
+            <div className="min-w-0 flex-1 truncate text-left">{h.title}</div>
+            <span className="flex items-center gap-0.5 text-emerald-300 shrink-0"><ThumbsUp className="h-3 w-3" />{h.likes ?? 0}</span>
+            <span className="flex items-center gap-0.5 text-destructive shrink-0"><ThumbsDown className="h-3 w-3" />{h.dislikes ?? 0}</span>
+          </button>
+        ))}
+      </PanelBlock>
+
+      {/* Quick actions moved to the bottom — filtered to modOk tabs for moderators */}
+      <QuickActionsBar onOpen={goTab} actions={isAdmin ? QUICK_ACTIONS : QUICK_ACTIONS.filter((a) => MOD_SAFE_TABS.has(a.t))} />
     </div>
   );
 }
-
 function setActiveTabFromAnalytics(_nav: any, _tab: string) {
   // Dispatch a custom event the parent listens to, or fallback: store and reload
   const ev = new CustomEvent("admin:set-tab", { detail: _tab });
@@ -3348,22 +3827,26 @@ function setActiveTabFromAnalytics(_nav: any, _tab: string) {
 
 const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: BarChart3, l: "Analytics", t: "analytics" },
+  { i: ImageIcon, l: "Ads Management", t: "ads" },
+  { i: Eye, l: "User Experience", t: "ux" },
   { i: Users, l: "Users", t: "users" },
   { i: Shield, l: "Banned", t: "bannedusers" },
   { i: Sparkles, l: "Admin AI", t: "adminai" },
+  { i: AlertTriangle, l: "Suspicious Activity", t: "flags" },
   { i: AlertTriangle, l: "Appeals", t: "appeals" },
   { i: History, l: "Audit", t: "audit" },
   { i: ClipboardList, l: "Bet Tracker", t: "bettracker" },
   { i: Eye, l: "Attendance", t: "attendance" },
   { i: Send, l: "Broadcast", t: "broadcast" },
   { i: BellRing, l: "Push Blast", t: "pushblast" },
+  { i: BellRing, l: "Auto Push", t: "pushrecurring" },
   { i: GalleryHorizontalEnd, l: "Home Banners", t: "banners" },
   { i: Gamepad2, l: "Arcade", t: "arcade" },
+  { i: RotateCw, l: "Lucky Wheel", t: "luckywheel" },
   { i: History, l: "Casino History", t: "casinohistory" },
   { i: Sparkles, l: "Challenges", t: "challenges" },
   { i: MessageSquare, l: "Chat", t: "chat" },
   { i: Megaphone, l: "Content", t: "content" },
-  { i: Megaphone, l: "News", t: "news" },
   { i: Target, l: "Futures", t: "futures" },
   { i: Trophy, l: "Emblems", t: "emblems" },
   { i: Calendar, l: "Events", t: "events" },
@@ -3374,6 +3857,7 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: Vote, l: "Polls", t: "polls" },
   { i: ShoppingBag, l: "Shop", t: "shop" },
   { i: LifeBuoy, l: "FAQ / Help", t: "faq" },
+  { i: Newspaper, l: "News", t: "news" },
   { i: ListOrdered, l: "Leaderboard", t: "leaderboard" },
   { i: Trophy, l: "Matches", t: "matches" },
   { i: Send, l: "Notify", t: "notify" },
@@ -3385,10 +3869,11 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: AlertTriangle, l: "Risk", t: "risk" },
   { i: Trophy, l: "Seasons", t: "seasons" },
   { i: Trophy, l: "Tournaments", t: "tournaments" },
+  { i: Download, l: "App Updates", t: "appupdates" },
   { i: SettingsIcon, l: "Settings", t: "settings" },
   { i: Sparkles, l: "Spotlights", t: "spotlights" },
   { i: Sparkles, l: "Streak/Push", t: "streakpush" },
-  { i: ClipboardList, l: "Tasks", t: "tasks" },
+  { i: ClipboardList, l: "Task", t: "tasks" },
   { i: Ticket, l: "Tickets", t: "tickets" },
   { i: Coins, l: "Tokens", t: "tokens" },
   { i: Coins, l: "Token Rules", t: "tokenrules" },
@@ -3399,37 +3884,39 @@ const QUICK_ACTIONS: { i: any; l: string; t: string }[] = [
   { i: Wallet, l: "Withdrawals", t: "withdrawals" },
   { i: Trophy, l: "Won Bets", t: "wonbets" },
   { i: X, l: "Lost Bets", t: "lostbets" },
+  { i: Swords, l: "Wagers", t: "wagers" },
+  { i: ListChecks, l: "Quest", t: "quests" },
+  { i: Sparkles, l: "Floating Icons", t: "floating" },
 ];
 
 const QA_PALETTE = [
-  { ic: "text-emerald-400", bd: "border-emerald-500/30 hover:border-emerald-400/70 hover:bg-emerald-500/10" },
   { ic: "text-sky-400",     bd: "border-sky-500/30 hover:border-sky-400/70 hover:bg-sky-500/10" },
   { ic: "text-rose-400",    bd: "border-rose-500/30 hover:border-rose-400/70 hover:bg-rose-500/10" },
-  { ic: "text-amber-400",   bd: "border-amber-500/30 hover:border-amber-400/70 hover:bg-amber-500/10" },
   { ic: "text-violet-400",  bd: "border-violet-500/30 hover:border-violet-400/70 hover:bg-violet-500/10" },
   { ic: "text-fuchsia-400", bd: "border-fuchsia-500/30 hover:border-fuchsia-400/70 hover:bg-fuchsia-500/10" },
   { ic: "text-cyan-400",    bd: "border-cyan-500/30 hover:border-cyan-400/70 hover:bg-cyan-500/10" },
-  { ic: "text-lime-400",    bd: "border-lime-500/30 hover:border-lime-400/70 hover:bg-lime-500/10" },
-  { ic: "text-orange-400",  bd: "border-orange-500/30 hover:border-orange-400/70 hover:bg-orange-500/10" },
   { ic: "text-pink-400",    bd: "border-pink-500/30 hover:border-pink-400/70 hover:bg-pink-500/10" },
   { ic: "text-teal-400",    bd: "border-teal-500/30 hover:border-teal-400/70 hover:bg-teal-500/10" },
   { ic: "text-indigo-400",  bd: "border-indigo-500/30 hover:border-indigo-400/70 hover:bg-indigo-500/10" },
 ];
 
-function QuickActionsBar({ onOpen }: { onOpen: (t: string) => void }) {
-  const actions = [...QUICK_ACTIONS].sort((a, b) => a.l.localeCompare(b.l));
+function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string) => void; actions?: typeof QUICK_ACTIONS }) {
+  const actions = [...(actionsProp ?? QUICK_ACTIONS)].sort((a, b) => a.l.localeCompare(b.l));
   return (
     <Card className="border-primary/20 bg-card/60 p-3">
-      <div className="text-[10px] sm:text-xs font-bold tracking-widest text-primary mb-2">QUICK ACTIONS</div>
-      <div className="overflow-x-auto pb-2 -mb-2">
-        {/* 4 buttons stacked per column; columns flow horizontally and scroll left/right */}
-        <div className="grid grid-rows-4 grid-flow-col auto-cols-[68px] sm:auto-cols-[84px] gap-1.5 w-max">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.25em] text-primary">Quick Actions</div>
+        <div className="text-[7px] sm:text-[9px] text-muted-foreground uppercase tracking-widest">Scroll for more →</div>
+      </div>
+      {/* Fixed at 4 rows tall; extra actions flow into new columns you scroll to horizontally. */}
+      <div className="overflow-x-auto pb-1 -mb-1">
+        <div className="grid grid-rows-4 grid-flow-col auto-cols-[76px] sm:auto-cols-[92px] gap-1.5 sm:gap-2 w-max">
           {actions.map((q, idx) => {
             const c = QA_PALETTE[idx % QA_PALETTE.length];
             return (
-              <button key={q.l} onClick={() => onOpen(q.t)} className={`flex flex-col items-center justify-center gap-1 p-1.5 rounded border active:scale-95 transition ${c.bd}`}>
-                <q.i className={`h-3.5 w-3.5 ${c.ic}`} />
-                <span className="text-[7px] sm:text-[9px] text-foreground text-center leading-tight">{q.l}</span>
+              <button key={q.l} onClick={() => onOpen(q.t)} className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border bg-background/40 active:scale-95 transition min-h-[54px] ${c.bd}`}>
+                <q.i className={`h-4 w-4 ${c.ic}`} />
+                <span className="text-[7px] sm:text-[9px] text-foreground text-center leading-tight font-semibold">{q.l}</span>
               </button>
             );
           })}
@@ -3485,23 +3972,30 @@ function MetricSquare({ icon: Icon, value, title, sub, tone, compact, onClick }:
   })();
   const toneColor =
     numeric == null ? "text-foreground" : numeric > 0 ? "text-emerald-400" : numeric < 0 ? "text-red-400" : "text-foreground";
-  const sizeCls = tone === "gold-lg"
-    ? "text-[10px] sm:text-base leading-tight"
-    : compact
-    ? "text-xs sm:text-lg leading-none"
-    : "text-base sm:text-2xl leading-none";
-  const valueClass = `${sizeCls} font-black ${toneColor}`;
-  const content = (
-    <>
-      <Icon className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-primary/70 mb-0.5" />
-      <div className={valueClass}>{value}</div>
-      <div className="mt-0.5">
-        <div className="text-[6px] sm:text-[9px] uppercase tracking-wider text-muted-foreground leading-tight font-semibold">{title}</div>
-        {sub && <div className="text-[5px] sm:text-[8px] uppercase tracking-wider text-muted-foreground/70 leading-tight">{sub}</div>}
+  const highlight = tone === "gold-lg";
+  const content = compact ? (
+    <div className="flex items-center gap-2 w-full">
+      <span className="grid h-6 w-6 sm:h-8 sm:w-8 shrink-0 place-items-center rounded-lg border border-primary/30 bg-primary/10">
+        <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[6px] sm:text-[9px] uppercase tracking-[0.18em] text-muted-foreground font-semibold leading-tight truncate">{title}</div>
+        <div className={`text-xs sm:text-lg font-black leading-tight ${toneColor}`}>{value}</div>
       </div>
-    </>
+    </div>
+  ) : (
+    <div className="flex items-start gap-2 w-full">
+      <span className={`grid h-8 w-8 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-xl border ${highlight ? "border-primary/50 bg-primary/20" : "border-primary/25 bg-primary/10"}`}>
+        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${highlight ? "text-primary" : "text-primary/80"}`} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[6px] sm:text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-bold leading-tight truncate">{title}</div>
+        <div className={`mt-0.5 text-base sm:text-2xl font-black leading-none ${toneColor}`}>{value}</div>
+        {sub && <div className="mt-1 text-[5px] sm:text-[8px] uppercase tracking-[0.15em] text-muted-foreground/70 leading-tight truncate">{sub}</div>}
+      </div>
+    </div>
   );
-  const baseCls = "border-primary/20 bg-card/60 p-1.5 sm:p-3 flex flex-col justify-between min-h-[68px] sm:min-h-[100px] hover:border-primary/50 hover:bg-primary/10 active:scale-95 transition cursor-pointer text-left w-full";
+  const baseCls = `rounded-xl bg-card/60 ${compact ? "p-1.5 sm:p-2.5 min-h-[46px] sm:min-h-[58px]" : "p-2 sm:p-3 min-h-[68px] sm:min-h-[92px]"} flex items-center hover:border-primary/50 hover:bg-primary/10 active:scale-[0.98] transition cursor-pointer text-left w-full ${highlight ? "border-primary/60 shadow-[0_0_30px_-14px_rgba(251,191,36,0.8)]" : "border-primary/20"}`;
   if (onClick) {
     return (
       <button type="button" onClick={onClick} className={`rounded-xl border shadow ${baseCls}`}>
@@ -3511,6 +4005,18 @@ function MetricSquare({ icon: Icon, value, title, sub, tone, compact, onClick }:
   }
   return (
     <Card className={baseCls}>{content}</Card>
+  );
+}
+
+function ConsolePill({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-background/60 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/15 active:scale-95 transition"
+    >
+      <Icon className="h-3 w-3" />{label}
+    </button>
   );
 }
 
@@ -3548,656 +4054,164 @@ function PanelBlock({ title, onView, children, accent, compact, count, hideWhenE
 }
 
 /* ============================ SETTINGS ============================ */
-function SettingsPanel() {
-  const [s, setS] = useState<any>(null);
-  const confirm = useConfirm();
-  useEffect(() => { supabase.from("app_settings").select("*").eq("id", 1).maybeSingle().then(({ data }) => setS(data ?? { id: 1 })); }, []);
-  if (!s) return null;
-  async function save() {
-    const { error } = await supabase.from("app_settings").upsert(s);
-    if (error) toast.error(error.message); else { toast.success("Saved"); logAudit("settings_updated", "settings"); }
-  }
-  async function wipe() {
-    if (!await confirm({ title: "EMERGENCY: Wipe ALL user tokens?", description: "This sets every user's balance to 0 and cannot be undone.", tone: "danger", confirmText: "Wipe everything" })) return;
-    const { error } = await supabase.rpc("wipe_all_tokens");
-    if (error) toast.error(error.message); else toast.success("All tokens cleared");
-  }
-  async function uploadPopup(f: File) {
-    const path = `popup-${Date.now()}-${f.name}`;
-    const { error } = await supabase.storage.from("ads").upload(path, f, { upsert: true });
-    if (error) { toast.error(error.message); return; }
-    const url = supabase.storage.from("ads").getPublicUrl(path).data.publicUrl;
-    setS({ ...s, popup_ad_image: url });
-  }
-  async function uploadInto(field: string, f: File) {
-    const path = `${field}-${Date.now()}-${f.name}`;
-    const { error } = await supabase.storage.from("ads").upload(path, f, { upsert: true });
-    if (error) { toast.error(error.message); return; }
-    const url = supabase.storage.from("ads").getPublicUrl(path).data.publicUrl;
-    setS({ ...s, [field]: url });
-  }
-  return (
-    <div className="grid lg:grid-cols-2 gap-4 max-w-5xl">
-      <SettingsSection icon={Pause} title="Maintenance" subtitle="Block non-admin access and post a notice.">
-        <div className="flex items-center justify-between">
-          <div className="text-sm">Maintenance mode</div>
-          <Switch checked={!!s.maintenance_mode} onCheckedChange={(v) => setS({ ...s, maintenance_mode: v })} />
-        </div>
-        <Textarea placeholder="Message shown to users" value={s.maintenance_message ?? ""} onChange={(e) => setS({ ...s, maintenance_message: e.target.value })} />
-        <FieldLuxe label="Banner image (optional)"><Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadInto("maintenance_image", e.target.files[0])} /></FieldLuxe>
-        {s.maintenance_image && (
-          <div className="space-y-1">
-            <img src={s.maintenance_image} alt="" className="w-full max-h-40 object-contain rounded border border-border" />
-            <Button variant="ghost" size="sm" className="text-destructive h-7" onClick={() => setS({ ...s, maintenance_image: null })}>Remove image</Button>
-          </div>
-        )}
-      </SettingsSection>
-
-      <SettingsSection icon={Lock} title="Website Closed" subtitle="Fully close the site to non-admin visitors and post a notice.">
-        <div className="flex items-center justify-between">
-          <div className="text-sm">Close website</div>
-          <Switch checked={!!s.closed_mode} onCheckedChange={(v) => setS({ ...s, closed_mode: v })} />
-        </div>
-        <Textarea placeholder="Message shown to users" value={s.closed_message ?? ""} onChange={(e) => setS({ ...s, closed_message: e.target.value })} />
-        <FieldLuxe label="Banner image (optional)"><Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadInto("closed_image", e.target.files[0])} /></FieldLuxe>
-        {s.closed_image && (
-          <div className="space-y-1">
-            <img src={s.closed_image} alt="" className="w-full max-h-40 object-contain rounded border border-border" />
-            <Button variant="ghost" size="sm" className="text-destructive h-7" onClick={() => setS({ ...s, closed_image: null })}>Remove image</Button>
-          </div>
-        )}
-      </SettingsSection>
-
-      <SettingsSection icon={Coins} title="Betting Limits" subtitle="Stake and payout guardrails.">
-        <FieldLuxe label="Minimum stake">
-          <Input type="number" value={s.min_stake ?? 2000000} onChange={(e) => setS({ ...s, min_stake: Number(e.target.value) })} />
-        </FieldLuxe>
-        <FieldLuxe label="Maximum payout cap">
-          <Input type="number" value={s.max_payout ?? 100000000} onChange={(e) => setS({ ...s, max_payout: Number(e.target.value) })} />
-        </FieldLuxe>
-        <p className="text-[10px] text-muted-foreground">Bets whose potential payout exceeds the cap are automatically clamped.</p>
-      </SettingsSection>
-
-      <SettingsSection icon={Ticket} title="Re-bet" subtitle="Let members place another bet right after a successful placement." right={<Switch checked={s.allow_rebet !== false} onCheckedChange={(v) => setS({ ...s, allow_rebet: v })} />}>
-        <p className="text-[10px] text-muted-foreground">When on, a “Place another bet” action appears after a ticket is placed (real, virtual and seasonal/futures markets), so users can quickly pick another selection. When off, the slip closes to the placed-ticket screen.</p>
-      </SettingsSection>
-
-      <SettingsSection icon={Sparkles} title="Brand" subtitle="Tagline shown across landing surfaces.">
-        <FieldLuxe label="Hero tagline"><Input value={s.hero_tagline ?? ""} onChange={(e) => setS({ ...s, hero_tagline: e.target.value })} placeholder="Season 4 · Live" /></FieldLuxe>
-        <FieldLuxe label="Home headline (big colorful text — shown in CAPITALS)">
-          <Textarea rows={2} value={s.hero_title ?? ""} onChange={(e) => setS({ ...s, hero_title: e.target.value })} placeholder="Where gangs clash and legends are gold-plated." />
-        </FieldLuxe>
-        <FieldLuxe label="Home sub-text (small paragraph below the headline)">
-          <Textarea rows={3} value={s.hero_subtitle ?? ""} onChange={(e) => setS({ ...s, hero_subtitle: e.target.value })} placeholder="The Lomita Shooters League is a virtual-token competitive shooting circuit…" />
-        </FieldLuxe>
-        <p className="text-[10px] text-muted-foreground">Leave blank to keep the default styled headline. Custom headlines are automatically shown in gold capitals.</p>
-      </SettingsSection>
-
-      <SettingsSection icon={MessageSquare} title="Contact" subtitle="Public-facing contact channels.">
-        <FieldLuxe label="Email"><Input value={s.contact_email ?? ""} onChange={(e) => setS({ ...s, contact_email: e.target.value })} /></FieldLuxe>
-        <FieldLuxe label="Phone"><Input value={s.contact_phone ?? ""} onChange={(e) => setS({ ...s, contact_phone: e.target.value })} /></FieldLuxe>
-        <FieldLuxe label="WhatsApp"><Input value={s.contact_whatsapp ?? ""} onChange={(e) => setS({ ...s, contact_whatsapp: e.target.value })} /></FieldLuxe>
-        <FieldLuxe label="Discord support server link"><Input placeholder="https://discord.gg/your-invite" value={s.discord_support_url ?? ""} onChange={(e) => setS({ ...s, discord_support_url: e.target.value })} /></FieldLuxe>
-      </SettingsSection>
-
-      <SettingsSection icon={Megaphone} title="About & Trust" subtitle="Public-facing copy.">
-        <FieldLuxe label="About us"><Textarea rows={3} value={s.about_us ?? ""} onChange={(e) => setS({ ...s, about_us: e.target.value })} /></FieldLuxe>
-        <FieldLuxe label="Why trust us"><Textarea rows={3} value={s.why_trust_us ?? ""} onChange={(e) => setS({ ...s, why_trust_us: e.target.value })} /></FieldLuxe>
-        <FieldLuxe label="Terms & Conditions"><Textarea rows={6} value={s.terms_content ?? ""} onChange={(e) => setS({ ...s, terms_content: e.target.value })} /></FieldLuxe>
-      </SettingsSection>
-
-      <SettingsSection icon={ImageIcon} title="Pop-up Ad" subtitle="Promo modal across the platform." right={<Switch checked={!!s.popup_ad_active} onCheckedChange={(v) => setS({ ...s, popup_ad_active: v })} />}>
-        <FieldLuxe label="Size">
-          <Select value={s.popup_ad_size ?? "large"} onValueChange={(v) => setS({ ...s, popup_ad_size: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="large">Large</SelectItem>
-              <SelectItem value="xl">Extra Large</SelectItem>
-              <SelectItem value="full">Full screen (covers home page)</SelectItem>
-            </SelectContent>
-          </Select>
-        </FieldLuxe>
-        <FieldLuxe label="Image"><Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadPopup(e.target.files[0])} /></FieldLuxe>
-        {s.popup_ad_image && <img src={s.popup_ad_image} alt="" className="w-full max-h-48 object-contain rounded border border-border" />}
-        <FieldLuxe label="Body text/HTML"><Textarea rows={3} value={s.popup_ad_text ?? ""} onChange={(e) => setS({ ...s, popup_ad_text: e.target.value })} /></FieldLuxe>
-        <FieldLuxe label="Link (optional)"><Input value={s.popup_ad_link ?? ""} onChange={(e) => setS({ ...s, popup_ad_link: e.target.value })} /></FieldLuxe>
-      </SettingsSection>
-
-      <SettingsSection icon={Sparkles} title="Platform Identity" subtitle="Rename the platform and set the home-page logo.">
-        <FieldLuxe label="Platform name (shown in header, footer & home page)">
-          <Input value={s.site_name ?? ""} onChange={(e) => setS({ ...s, site_name: e.target.value })} placeholder="Lomita Shooters League" />
-        </FieldLuxe>
-        <ImageSettingControl
-          label="Home page logo"
-          value={s.site_logo_url}
-          onChange={(url) => setS({ ...s, site_logo_url: url })}
-          showFitControls={false}
-          aspect="16 / 9"
-          previewBg="#0b1512"
-          help="Displayed at the very top of the home page hero. Upload directly or paste an image URL. Transparent PNG looks best."
-        />
-        <p className="text-[10px] text-amber-300/80">Remember to press “Save settings” below to apply.</p>
-      </SettingsSection>
-
-      <SettingsSection icon={ImageIcon} title="Backgrounds & Appearance" subtitle="Site-wide background and admin console header image — upload or paste a URL, then crop/fit and preview live.">
-        <ImageSettingControl
-          label="Site background (all pages)"
-          value={s.site_bg_url}
-          onChange={(url) => setS({ ...s, site_bg_url: url })}
-          fit={s.site_bg_fit ?? "cover"}
-          onFitChange={(v) => setS({ ...s, site_bg_fit: v })}
-          position={s.site_bg_position ?? "center"}
-          onPositionChange={(v) => setS({ ...s, site_bg_position: v })}
-          aspect="16 / 9"
-          help="Full-screen backdrop across every page. The preview shows exactly how it will be cropped. A large landscape image (1920×1080+) works best; it is dimmed for readability automatically."
-        />
-        <ImageSettingControl
-          label="Home page hero background"
-          value={s.hero_bg_url}
-          onChange={(url) => setS({ ...s, hero_bg_url: url })}
-          fit={s.hero_bg_fit ?? "cover"}
-          onFitChange={(v) => setS({ ...s, hero_bg_fit: v })}
-          position={s.hero_bg_position ?? "center"}
-          onPositionChange={(v) => setS({ ...s, hero_bg_position: v })}
-          aspect="21 / 9"
-          help="Background image behind the hero headline at the very top of the home page. Leave empty for a clean dark hero (no image)."
-        />
-        <ImageSettingControl
-          label="Featured Matches background"
-          value={s.featured_bg_url}
-          onChange={(url) => setS({ ...s, featured_bg_url: url })}
-          fit={s.featured_bg_fit ?? "cover"}
-          onFitChange={(v) => setS({ ...s, featured_bg_fit: v })}
-          position={s.featured_bg_position ?? "center"}
-          onPositionChange={(v) => setS({ ...s, featured_bg_position: v })}
-          aspect="16 / 9"
-          help="Background image shown behind the “Featured Matches” section on the home page. Only appears when there is NO active Seasonal Tournament. Leave empty for the plain dark section."
-        />
-        <ImageSettingControl
-          label="Admin console header image"
-          value={s.admin_hero_url}
-          onChange={(url) => setS({ ...s, admin_hero_url: url })}
-          fit={s.admin_hero_fit ?? "cover"}
-          onFitChange={(v) => setS({ ...s, admin_hero_fit: v })}
-          position={s.admin_hero_position ?? "center right"}
-          onPositionChange={(v) => setS({ ...s, admin_hero_position: v })}
-          aspect="21 / 9"
-          help="Shown behind the “Super Admin Console” banner at the top of the admin & moderator pages. A wide image works best."
-        />
-        <ImageSettingControl
-          label="Top navigation bar background"
-          value={s.nav_bg_url}
-          onChange={(url) => setS({ ...s, nav_bg_url: url })}
-          fit={s.nav_bg_fit ?? "cover"}
-          onFitChange={(v) => setS({ ...s, nav_bg_fit: v })}
-          position={s.nav_bg_position ?? "center"}
-          onPositionChange={(v) => setS({ ...s, nav_bg_position: v })}
-          aspect="32 / 9"
-          help="Background image for the sticky top navbar across the whole platform. A very wide, short banner works best. Leave empty to use the default dark bar."
-        />
-        <p className="text-[10px] text-amber-300/80">Remember to press “Save settings” below to apply.</p>
-      </SettingsSection>
-
-      <Card className="glass-strong p-4 lg:col-span-2 flex flex-wrap items-center gap-2 justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Lock className="h-4 w-4" />Saving writes an audit log entry.</div>
-        <div className="flex gap-2 flex-wrap">
-          <Button className="btn-luxury h-11 px-6" onClick={save}><Check className="h-4 w-4 mr-1" />Save settings</Button>
-          <Button variant="destructive" className="h-11" onClick={wipe}><AlertTriangle className="h-4 w-4 mr-1" />Emergency: wipe all tokens</Button>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function SettingsSection({ icon: Icon, title, subtitle, right, children }: { icon: any; title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <Card className="glass-strong p-5 space-y-3">
-      <div className="flex items-start gap-3">
-        <span className="h-10 w-10 rounded-xl bg-gradient-gold text-primary-foreground grid place-items-center shrink-0 shadow-gold"><Icon className="h-5 w-5" /></span>
-        <div className="flex-1">
-          <div className="font-bold text-base">{title}</div>
-          {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
-        </div>
-        {right}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </Card>
-  );
-}
-
-/* ============================ WITHDRAWALS ============================ */
-function WithdrawalsPanel() {
-  const [list, setList] = useState<any[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, any>>({});
-  const confirm = useConfirm();
-  async function load() {
-    const { data } = await supabase.from("withdrawal_requests").select("*").order("created_at", { ascending: false });
-    setList(data ?? []);
-    const ids = Array.from(new Set((data ?? []).map((r: any) => r.user_id)));
-    if (ids.length) {
-      const { data: p } = await supabase.from("profiles").select("id,full_name,email,token_balance").in("id", ids);
-      const m: Record<string, any> = {}; (p ?? []).forEach((x: any) => { m[x.id] = x; }); setProfiles(m);
-    }
-  }
-  useEffect(() => {
-    load();
-    const ch = supabase.channel("admin-wd").on("postgres_changes", { event: "*", schema: "public", table: "withdrawal_requests" }, load).subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-
-  async function decide(r: any, approve: boolean) {
-    const ok = await confirm({
-      title: approve ? "Approve withdrawal?" : "Decline withdrawal?",
-      description: approve ? "Tokens stay deducted; user will be notified." : "Tokens will be refunded to the user.",
-      tone: approve ? "default" : "danger",
-      confirmText: approve ? "Approve" : "Decline & refund",
-      inputLabel: approve ? "Instructions for user" : "Reason for declining",
-      inputPlaceholder: approve ? "Optional payout instructions…" : "Optional decline reason…",
-    });
-    if (!ok || typeof ok !== "object") return;
-    const note = ok.value;
-    const { error } = await supabase.rpc("review_withdrawal_request", { _id: r.id, _approve: approve, _note: note || undefined });
-    if (error) toast.error(error.message); else {
-      toast.success("Done");
-      await logAudit(`withdrawal_${approve ? "approved" : "declined"}`, "withdrawal", r.id, {
-        amount: r.amount, reason: note ?? null, target_user_id: r.user_id,
-        target_user_email: profiles[r.user_id]?.email, target_user_name: profiles[r.user_id]?.full_name,
-        ingame_name: r.ingame_name, gang_name: r.gang_name,
-      });
-      load();
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      {list.length === 0 && <p className="text-sm text-muted-foreground">No withdrawal requests.</p>}
-      {list.map((r) => (
-        <Card key={r.id} className="glass p-3 flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0 flex-1">
-            <div className="font-bold">{r.amount.toLocaleString()} tokens · <span className="text-primary">{r.ingame_name}</span> <span className="text-xs text-muted-foreground">({r.gang_name})</span></div>
-            <div className="text-xs text-muted-foreground">{profiles[r.user_id]?.full_name} · {profiles[r.user_id]?.email}</div>
-            {r.ticket_ref && <div className="text-xs">Ticket: <span className="font-mono">{r.ticket_ref}</span></div>}
-            <div className="text-[10px] text-muted-foreground">{new Date(r.created_at).toLocaleString()}</div>
-            {r.admin_note && <div className="text-xs italic mt-1">"{r.admin_note}"</div>}
-          </div>
-          <Badge variant="outline" className="capitalize">{r.status}</Badge>
-          {r.status === "pending" && (
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" onClick={() => decide(r, false)}>Decline</Button>
-              <Button size="sm" className="btn-luxury" onClick={() => decide(r, true)}>Approve</Button>
-            </div>
-          )}
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-/* ============================ LEADERBOARD ADMIN ============================ */
-function LeaderboardAdminPanel() {
-  const [gangs, setGangs] = useState<LbRow[]>([]);
-  const [shooters, setShooters] = useState<LbRow[]>([]);
-  const [tab, setTab] = useState<"gang" | "shooter">("gang");
-  const [edits, setEdits] = useState<Record<string, Partial<LbRow>>>({});
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [headerUrl, setHeaderUrl] = useState<string>("");
-  const [headerBusy, setHeaderBusy] = useState(false);
-  const confirm = useConfirm();
-
-  async function load() {
-    const { gangs, shooters } = await loadStandings();
-    setGangs(gangs);
-    setShooters(shooters);
-    setEdits({});
-  }
-  useEffect(() => {
-    load();
-    supabase.from("app_settings").select("leaderboard_header_url").eq("id", 1).maybeSingle()
-      .then(({ data }) => setHeaderUrl((data as any)?.leaderboard_header_url ?? ""));
-  }, []);
-
-  async function saveHeaderUrl(url: string) {
-    const { error } = await supabase.from("app_settings").update({ leaderboard_header_url: url || null } as any).eq("id", 1);
-    if (error) { toast.error(error.message); return; }
-    setHeaderUrl(url);
-    await logAudit("leaderboard_header_update", "app_settings", undefined, { url });
-    toast.success("Leaderboard header saved");
-  }
-  async function uploadHeader(file: File) {
-    setHeaderBusy(true);
-    try {
-      const path = `leaderboard/header-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-      const { error } = await supabase.storage.from("ads").upload(path, file, { upsert: true });
-      if (error) { toast.error(error.message); return; }
-      const url = supabase.storage.from("ads").getPublicUrl(path).data.publicUrl;
-      await saveHeaderUrl(url);
-    } finally {
-      setHeaderBusy(false);
-    }
-  }
-
-  const rows = tab === "gang" ? gangs : shooters;
-  const rowKey = (r: LbRow) => `${tab}:${r.name}`;
-  function field(r: LbRow, k: keyof LbRow): any {
-    const e = edits[rowKey(r)];
-    return e && k in e ? (e as any)[k] : (r as any)[k];
-  }
-  function setField(r: LbRow, k: keyof LbRow, v: any) {
-    setEdits((prev) => ({ ...prev, [rowKey(r)]: { ...prev[rowKey(r)], [k]: v } }));
-  }
-
-  async function saveRow(r: LbRow) {
-    setSavingKey(rowKey(r));
-    const payload: any = {
-      kind: tab,
-      name: r.name,
-      top_player: tab === "gang" ? (field(r, "top_player") || null) : (field(r, "gang_faction") || null),
-      total_score: Number(field(r, "TS") ?? 0),
-      wins: Number(field(r, "W") ?? 0),
-      losses: Number(field(r, "L") ?? 0),
-      draws: Number(field(r, "D") ?? 0),
-      played: Number(field(r, "P") ?? 0),
-      points: Number(field(r, "PTS") ?? 0),
-      manual_rank: field(r, "manual_rank") != null && String(field(r, "manual_rank")) !== "" ? Number(field(r, "manual_rank")) : null,
-      is_hidden: false,
-    };
-    if (r.override_id) payload.id = r.override_id;
-    const { error } = await supabase.from("leaderboard_overrides").upsert(payload);
-    setSavingKey(null);
-    if (error) { toast.error(error.message); return; }
-    await logAudit("leaderboard_override_edit", "leaderboard_overrides", r.override_id ?? undefined, payload);
-    toast.success(`${r.name} updated`);
-    load();
-  }
-
-  async function resetRow(r: LbRow) {
-    if (!r.override_id) { toast.info("This row is auto-computed — nothing to reset."); return; }
-    if (!await confirm({ title: `Reset ${r.name} to auto-computed stats?`, description: "Removes the manual override so the row reflects match results again.", confirmText: "Reset" })) return;
-    await supabase.from("leaderboard_overrides").delete().eq("id", r.override_id);
-    await logAudit("leaderboard_override_delete", "leaderboard_overrides", r.override_id);
-    toast.success("Reset to auto stats");
-    load();
-  }
-
-  async function hideRow(r: LbRow) {
-    if (!await confirm({ title: `Remove ${r.name} from the leaderboard?`, description: "Hidden from the public board without touching match history. You can restore it later.", tone: "danger", confirmText: "Remove" })) return;
-    const payload: any = { kind: tab, name: r.name, is_hidden: true, wins: 0, losses: 0, draws: 0, played: 0, points: 0, total_score: 0 };
-    if (r.override_id) payload.id = r.override_id;
-    const { error } = await supabase.from("leaderboard_overrides").upsert(payload);
-    if (error) { toast.error(error.message); return; }
-    await logAudit("leaderboard_hide", "leaderboard_overrides", r.override_id ?? undefined, { name: r.name, kind: tab });
-    toast.success(`${r.name} removed`);
-    load();
-  }
-
-  // move a row up/down by assigning explicit positions (manual_rank) to it and its neighbour
-  async function move(r: LbRow, dir: -1 | 1) {
-    const idx = rows.findIndex((x) => x.name === r.name);
-    const other = rows[idx + dir];
-    if (!other) return;
-    const myRank = idx + 1;
-    const otherRank = idx + dir + 1;
-    const mk = (row: LbRow, rank: number) => {
-      const p: any = {
-        kind: tab, name: row.name,
-        top_player: tab === "gang" ? (row.top_player || null) : (row.gang_faction || null),
-        total_score: row.TS, wins: row.W, losses: row.L, draws: row.D, played: row.P, points: row.PTS,
-        manual_rank: rank, is_hidden: false,
-      };
-      if (row.override_id) p.id = row.override_id;
-      return p;
-    };
-    const { error } = await supabase.from("leaderboard_overrides").upsert([mk(r, otherRank), mk(other, myRank)]);
-    if (error) { toast.error(error.message); return; }
-    await logAudit("leaderboard_reorder", "leaderboard_overrides", undefined, { moved: r.name, to: otherRank });
-    load();
-  }
-
-  async function clearAll() {
-    if (!await confirm({
-      title: `Wipe entire Leaderboard?`,
-      description: "Removes every manual override AND resets the auto-computed gang/shooter rows from past match results. Match history itself is preserved — new finished matches after this moment start a fresh leaderboard.",
-      tone: "danger", confirmText: "Clear leaderboard",
-    })) return;
-    const now = new Date().toISOString();
-    const { error: delErr } = await supabase.from("leaderboard_overrides").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    if (delErr) { toast.error(delErr.message); return; }
-    const { error: setErr } = await supabase.from("app_settings").update({ leaderboard_gangs_reset_at: now, leaderboard_shooters_reset_at: now } as any).eq("id", 1);
-    if (setErr) { toast.error(setErr.message); return; }
-    await logAudit("leaderboard_clear_all", "leaderboard_overrides", undefined, { reset_at: now });
-    toast.success("Leaderboard cleared");
-    load();
-  }
-  async function wipeKind(kind: "gang" | "shooter", label: string) {
-    if (!await confirm({ title: `Wipe ${label}?`, description: `Hides every ${label} row — both manual overrides and auto-computed rows. New activity after this moment starts a fresh list.`, tone: "danger", confirmText: `Wipe ${label}` })) return;
-    const now = new Date().toISOString();
-    const { error } = await supabase.from("leaderboard_overrides").delete().eq("kind", kind);
-    if (error) { toast.error(error.message); return; }
-    const patch: Record<string, string> = kind === "gang" ? { leaderboard_gangs_reset_at: now, hall_of_fame_reset_at: now } : { leaderboard_shooters_reset_at: now };
-    const { error: setErr } = await supabase.from("app_settings").update(patch as any).eq("id", 1);
-    if (setErr) { toast.error(setErr.message); return; }
-    await logAudit("leaderboard_wipe_kind", "leaderboard_overrides", undefined, { kind, reset_at: now });
-    toast.success(`${label} wiped`);
-    load();
-  }
-  async function clearHotBets() {
-    if (!await confirm({ title: "Clear all Hot Bets?", description: "Hides every current Hot Bet from the homepage. New bets placed after this moment will start a fresh Hot Bets list.", tone: "danger", confirmText: "Clear hot bets" })) return;
-    const now = new Date().toISOString();
-    const { error } = await supabase.from("app_settings").update({ hot_bets_reset_at: now } as any).eq("id", 1);
-    if (error) { toast.error(error.message); return; }
-    await logAudit("hot_bets_clear", "app_settings", undefined, { reset_at: now });
-    toast.success("Hot bets cleared");
-  }
-  async function wipeHallOfFame() {
-    if (!await confirm({ title: "Wipe Hall of Fame?", description: "Hides every current Grand Prize Winner from the Hall of Fame. New winning tickets after this moment start a fresh list.", tone: "danger", confirmText: "Wipe Hall of Fame" })) return;
-    const now = new Date().toISOString();
-    const { error } = await supabase.from("app_settings").update({ hall_of_fame_reset_at: now } as any).eq("id", 1);
-    if (error) { toast.error(error.message); return; }
-    await logAudit("hall_of_fame_wipe", "app_settings", undefined, { reset_at: now });
-    toast.success("Hall of Fame wiped");
-  }
-
-  const numCls = "h-8 w-14 text-center px-1 tabular-nums";
-
-  return (
-    <div className="space-y-3">
-      <Card className="glass-ice p-3 space-y-2 border-amber-500/40">
-        <div className="text-xs font-bold tracking-widest text-amber-300">LEADERBOARD HEADER IMAGE</div>
-        <p className="text-[10px] text-muted-foreground">Shown at the top of the public Leaderboard page instead of the plain title. Upload a banner or paste an image URL.</p>
-        {headerUrl && <img src={headerUrl} alt="Leaderboard header" className="w-full max-h-28 object-contain rounded-lg border border-amber-500/30 bg-black/20" />}
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex">
-            <input type="file" accept="image/*" className="hidden" disabled={headerBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadHeader(f); }} />
-            <span className={`inline-flex items-center h-9 px-3 rounded-md border border-amber-500/40 text-amber-200 text-sm cursor-pointer hover:bg-amber-500/10 ${headerBusy ? "opacity-50 pointer-events-none" : ""}`}>{headerBusy ? "Uploading…" : "Upload image"}</span>
-          </label>
-          <Input value={headerUrl} onChange={(e) => setHeaderUrl(e.target.value)} placeholder="…or paste image URL" className="flex-1 min-w-[180px] h-9" />
-          <Button size="sm" variant="outline" onClick={() => saveHeaderUrl(headerUrl)}>Save URL</Button>
-          {headerUrl && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => saveHeaderUrl("")}>Clear</Button>}
-        </div>
-      </Card>
-
-      <Card className="glass-ice p-3 flex flex-wrap items-center gap-2 border-destructive/40">
-        <div className="text-xs font-bold tracking-widest text-destructive mr-1">DANGER ZONE</div>
-        <Button variant="destructive" size="sm" onClick={clearAll}><Trash2 className="h-3 w-3 mr-1" />Wipe Leaderboard</Button>
-        <Button variant="destructive" size="sm" onClick={() => wipeKind("shooter", "Shooters")}><Trash2 className="h-3 w-3 mr-1" />Wipe Shooters</Button>
-        <Button variant="destructive" size="sm" onClick={() => wipeKind("gang", "Gangs / Factions")}><Trash2 className="h-3 w-3 mr-1" />Wipe Gangs</Button>
-        <Button variant="destructive" size="sm" onClick={wipeHallOfFame}><Trash2 className="h-3 w-3 mr-1" />Wipe Hall of Fame</Button>
-        <Button variant="destructive" size="sm" onClick={clearHotBets}><Flame className="h-3 w-3 mr-1" />Clear Hot Bets</Button>
-        <span className="text-[10px] text-muted-foreground ml-auto">This editor mirrors the public Leaderboard exactly. Edits are saved as overrides.</span>
-      </Card>
-
-      <div className="flex items-center gap-2">
-        <Button size="sm" variant={tab === "gang" ? "default" : "outline"} onClick={() => setTab("gang")}>Top Gangs / Factions</Button>
-        <Button size="sm" variant={tab === "shooter" ? "default" : "outline"} onClick={() => setTab("shooter")}>Top Shooters</Button>
-        <span className="text-[11px] text-muted-foreground ml-auto">{rows.length} entries</span>
-      </div>
-
-      <Card className="glass-ice p-0 overflow-x-auto">
-        <table className="w-full text-xs min-w-[860px]">
-          <thead>
-            <tr className="text-left uppercase tracking-widest text-muted-foreground border-b border-border bg-card/20">
-              <th className="px-2 py-2">Pos</th>
-              <th className="px-2 py-2">{tab === "gang" ? "Gang / Faction" : "Player"}</th>
-              <th className="px-2 py-2">{tab === "gang" ? "Top Player" : "Gang & Faction"}</th>
-              <th className="px-2 py-2 text-center">TS</th>
-              <th className="px-2 py-2 text-center">W</th>
-              <th className="px-2 py-2 text-center">L</th>
-              <th className="px-2 py-2 text-center">D</th>
-              <th className="px-2 py-2 text-center">P</th>
-              <th className="px-2 py-2 text-center">PTS</th>
-              <th className="px-2 py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No entries yet.</td></tr>}
-            {rows.map((r, i) => {
-              const dirty = !!edits[rowKey(r)];
-              return (
-                <tr key={r.name} className="border-b border-border/40">
-                  <td className="px-2 py-1.5">
-                    <div className="flex items-center gap-1">
-                      <span className="font-bold w-5 text-right">{i + 1}</span>
-                      <button onClick={() => move(r, -1)} disabled={i === 0} className="text-muted-foreground disabled:opacity-30 hover:text-primary"><ChevronLeft className="h-3.5 w-3.5 rotate-90" /></button>
-                      <button onClick={() => move(r, 1)} disabled={i === rows.length - 1} className="text-muted-foreground disabled:opacity-30 hover:text-primary"><ChevronRight className="h-3.5 w-3.5 rotate-90" /></button>
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 font-bold whitespace-nowrap">{r.name}{r.is_override && <Badge variant="outline" className="ml-1 text-[8px]">manual</Badge>}</td>
-                  <td className="px-2 py-1.5">
-                    <Input value={field(r, tab === "gang" ? "top_player" : "gang_faction") ?? ""} onChange={(e) => setField(r, tab === "gang" ? "top_player" : "gang_faction", e.target.value)} className="h-8 w-32" />
-                  </td>
-                  <td className="px-2 py-1.5"><Input type="number" value={field(r, "TS") ?? 0} onChange={(e) => setField(r, "TS", e.target.value)} className={numCls} /></td>
-                  <td className="px-2 py-1.5"><Input type="number" value={field(r, "W") ?? 0} onChange={(e) => setField(r, "W", e.target.value)} className={numCls} /></td>
-                  <td className="px-2 py-1.5"><Input type="number" value={field(r, "L") ?? 0} onChange={(e) => setField(r, "L", e.target.value)} className={numCls} /></td>
-                  <td className="px-2 py-1.5"><Input type="number" value={field(r, "D") ?? 0} onChange={(e) => setField(r, "D", e.target.value)} className={numCls} /></td>
-                  <td className="px-2 py-1.5"><Input type="number" value={field(r, "P") ?? 0} onChange={(e) => setField(r, "P", e.target.value)} className={numCls} /></td>
-                  <td className="px-2 py-1.5"><Input type="number" value={field(r, "PTS") ?? 0} onChange={(e) => setField(r, "PTS", e.target.value)} className={numCls} /></td>
-                  <td className="px-2 py-1.5">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button size="sm" variant={dirty ? "default" : "outline"} className="h-8" onClick={() => saveRow(r)} disabled={savingKey === rowKey(r)}><Check className="h-3 w-3" /></Button>
-                      {r.is_override && <Button size="sm" variant="outline" className="h-8" title="Reset to auto stats" onClick={() => resetRow(r)}><RotateCw className="h-3 w-3" /></Button>}
-                      <Button size="sm" variant="destructive" className="h-8" title="Remove from leaderboard" onClick={() => hideRow(r)}><Trash2 className="h-3 w-3" /></Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
-    </div>
-  );
-}
-
-/* ============================ LIVE SCORE EDITOR ============================ */
-function LiveScoreEditor({ m, onSave }: { m: any; onSave: (hs: number, as: number) => void }) {
-  const [hs, setHs] = useState<number>(m.home_score ?? 0);
-  const [as_, setAs] = useState<number>(m.away_score ?? 0);
-  return (
-    <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30">
-      <span className="text-[10px] uppercase tracking-widest text-emerald-300 mr-1">LIVE</span>
-      <Input type="number" value={hs} onChange={(e) => setHs(Number(e.target.value))} className="h-7 w-12 text-center text-xs" />
-      <span className="text-xs text-muted-foreground">–</span>
-      <Input type="number" value={as_} onChange={(e) => setAs(Number(e.target.value))} className="h-7 w-12 text-center text-xs" />
-      <Button size="sm" className="h-7" onClick={() => onSave(hs, as_)}><Check className="h-3 w-3" /></Button>
-    </div>
-  );
-}
-
-/* ============================ BET TRACKER ============================ */
-function BetTrackerPanel() {
-  const confirm = useConfirm();
-  const [bets, setBets] = useState<any[]>([]);
-  const [filter, setFilter] = useState<string>("all");
-  const [q, setQ] = useState("");
-
-  async function load() {
-    let qb = supabase.from("bets")
-      .select("*, profiles!user_id(full_name,email,ingame_name), bet_selections(*, matches!match_id(name))")
-      .order("created_at", { ascending: false }).limit(200);
-    if (filter !== "all") qb = qb.eq("status", filter as any);
-    const { data } = await qb;
-    setBets(data ?? []);
-  }
-  useEffect(() => { load(); }, [filter]);
-  useEffect(() => {
-    const ch = supabase.channel("admin-bettracker")
-      .on("postgres_changes", { event: "*", schema: "public", table: "bets" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "bet_selections" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [filter]);
-
-  async function suspend(b: any) {
-    const ok = await confirm({ title: "Suspend / flag ticket?", description: `Tracking ${b.tracking_id} will stop from crediting until admin unsuspends it.`, tone: "danger", confirmText: "Suspend ticket", inputLabel: "Reason", inputPlaceholder: "Why is this betslip being suspended?" });
-    if (!ok || typeof ok !== "object") return;
-    const { error } = await supabase.rpc("admin_suspend_bet", { _bet_id: b.id, _reason: ok.value || undefined });
-    if (error) toast.error(error.message); else {
-      await logAudit("bet_suspend", "bet", b.id, { tracking_id: b.tracking_id, stake: b.stake, user_id: b.user_id, target_user_email: b.profiles?.email, reason: ok.value });
-      toast.success("Ticket suspended"); load();
-    }
-  }
-  async function unsuspend(b: any) {
-    const { error } = await supabase.rpc("admin_unsuspend_bet", { _bet_id: b.id });
-    if (error) toast.error(error.message); else {
-      await logAudit("bet_unsuspend", "bet", b.id, { tracking_id: b.tracking_id, user_id: b.user_id, target_user_email: b.profiles?.email });
-      toast.success("Ticket reactivated"); load();
-    }
-  }
-  async function del(b: any) {
-    const ok = await confirm({ title: "Delete ticket?", description: `Tracking ${b.tracking_id}. You can optionally refund the stake before removal.`, tone: "danger", confirmText: "Delete ticket", cancelText: "Cancel", checkboxLabel: "Refund stake to user", inputLabel: "Admin note", inputPlaceholder: "Optional reason shown in logs…" });
-    if (!ok || typeof ok !== "object") return;
-    const { error } = await supabase.rpc("admin_delete_bet", { _bet_id: b.id, _refund: ok.checked, _reason: ok.value || undefined });
-    if (error) toast.error(error.message); else {
-      await logAudit("bet_delete", "bet", b.id, { tracking_id: b.tracking_id, stake: b.stake, refunded: !!ok.checked, user_id: b.user_id, target_user_email: b.profiles?.email, reason: ok.value });
-      toast.success(ok.checked ? "Ticket deleted & refunded" : "Ticket deleted"); load();
-    }
-  }
-  async function refund(b: any) {
-    const ok = await confirm({ title: "Mark ticket as refunded?", description: `Refunds ${Number(b.stake).toLocaleString()} tokens and closes ${b.tracking_id}.`, confirmText: "Refund stake", inputLabel: "Refund reason", inputPlaceholder: "Reason for refund…" });
-    if (!ok || typeof ok !== "object") return;
-    const { error } = await supabase.rpc("admin_refund_bet", { _bet_id: b.id, _reason: ok.value || undefined });
-    if (error) toast.error(error.message); else {
-      await logAudit("bet_refund", "bet", b.id, { tracking_id: b.tracking_id, stake: b.stake, user_id: b.user_id, target_user_email: b.profiles?.email, reason: ok.value });
-      toast.success("Ticket refunded"); load();
-    }
-  }
-  async function voidBet(b: any) {
-    const ok = await confirm({ title: "Mark ticket as void?", description: `Void ${b.tracking_id}. You can return the stake while keeping the ticket record visible.`, confirmText: "Mark void", checkboxLabel: "Refund stake to user", inputLabel: "Void reason", inputPlaceholder: "Reason for voiding this ticket…" });
-    if (!ok || typeof ok !== "object") return;
-    const { error } = await (supabase as any).rpc("admin_void_bet", { _bet_id: b.id, _refund: ok.checked, _reason: ok.value || undefined });
-    if (error) toast.error(error.message); else {
-      await logAudit("bet_void", "bet", b.id, { tracking_id: b.tracking_id, stake: b.stake, refunded: !!ok.checked, user_id: b.user_id, target_user_email: b.profiles?.email, reason: ok.value });
-      toast.success(ok.checked ? "Ticket voided & refunded" : "Ticket voided"); load();
-    }
-  }
-
-  const filtered = bets.filter((b) => {
-    if (!q) return true;
-    const s = q.toLowerCase();
-    return b.tracking_id?.toLowerCase().includes(s) || b.booking_code?.toLowerCase().includes(s) || b.profiles?.email?.toLowerCase().includes(s) || b.profiles?.full_name?.toLowerCase().includes(s);
+function AndroidAppUpdatesPanel() {
+  const [releaseControl, setReleaseControl] = useState<any>({
+    enabled: false,
+    latest_version: "1.0.63",
+    latest_build: 64,
+    download_url: "https://raw.githubusercontent.com/lomita483-del/efootballcompetitionbetting/main/public/downloads/efootball-competition-bet-latest.apk",
+    whats_new: [
+      "The app footer now displays the current release version and reads the live release metadata so the version stays synchronized with the latest app release.",
+      "The Android package version/build was incremented for this release.",
+      "Admin App Updater now includes Refresh version, which reads the Android version, build number, and What's New directly from the release files and stages them without enabling the update.",
+      "The release metadata and What's New list are synchronized to the staged Android release and include the complete user-facing changes in this version.",
+      "Release What's New is generated from the files changed since the previous Android release instead of copying unrelated older release notes."
+    ],
+    force_update: false,
+    minimum_supported_build: 52,
   });
 
+  useEffect(() => {
+    let alive = true;
+    const loadCurrentRelease = async () => {
+      try {
+        const bust = Date.now();
+        const res = await fetch("/app-release.json?t=" + bust, { cache: "no-store" });
+        if (!res.ok) throw new Error("Release metadata unavailable.");
+        const manifest = await res.json();
+        const version = String(manifest?.latestVersion ?? "").trim();
+        const build = Number(manifest?.latestBuild ?? 0);
+        if (!version || !build) throw new Error("Current Android release metadata is incomplete.");
+        const notes = Array.isArray(manifest?.whatsNew)
+          ? manifest.whatsNew.filter(Boolean)
+          : Array.isArray(manifest?.releaseNotes)
+            ? manifest.releaseNotes.filter(Boolean)
+            : [];
+        if (!alive) return;
+        setReleaseControl((prev: any) => ({
+          ...prev,
+          latest_version: version,
+          latest_build: build,
+          download_url: String(manifest?.downloadUrl ?? prev.download_url ?? ""),
+          whats_new: notes,
+          minimum_supported_build: build,
+          force_update: false,
+        }));
+      } catch {
+        // Keep the saved release controls if the public release manifest is unavailable.
+      }
+    };
+    loadCurrentRelease();
+    return () => { alive = false; };
+  }, []);
+
   return (
-    <div className="space-y-3">
-      <Card className="glass p-3 flex flex-wrap items-center gap-2">
-        <ClipboardList className="h-4 w-4 text-primary" />
-        <div className="font-bold text-sm">Bet Ticket Tracker</div>
-        <div className="flex-1" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tracking, code, user…" className="w-full md:max-w-xs" />
-        <Button size="sm" variant="outline" onClick={load}><RotateCw className="h-3 w-3 mr-1" />Refresh</Button>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {["all","open","won","lost","suspended","refunded","cashed_out","void"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
+    <div className="space-y-4 max-w-5xl">
+      <Card className="glass-strong p-5 border-primary/30">
+        <div className="flex items-start gap-3">
+          <span className="h-10 w-10 rounded-xl bg-gradient-gold text-primary-foreground grid place-items-center shrink-0 shadow-gold">
+            <Download className="h-5 w-5" />
+          </span>
+          <div>
+            <div className="font-bold text-lg">Android App Updates</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Manage the standalone Android app release separately from the general admin settings.
+              Prepare a release, save it, then manually trigger the update popup for users when you are ready.
+            </div>
+          </div>
+        </div>
       </Card>
+
+      <div className="lg:col-span-2">
+        <div id="android-app-updates" className="scroll-mt-6"><Card className="glass p-5">
+          <div className="grid gap-3 md:grid-cols-2">
+            <FieldLuxe label="Version">
+              <Input value={releaseControl.latest_version ?? ""} onChange={(e) => setReleaseControl({ ...releaseControl, latest_version: e.target.value })} placeholder="1.0.24" />
+            </FieldLuxe>
+            <FieldLuxe label="Build number">
+              <Input type="number" value={releaseControl.latest_build ?? 0} onChange={(e) => setReleaseControl({ ...releaseControl, latest_build: Number(e.target.value) })} />
+            </FieldLuxe>
+          </div>
+          <FieldLuxe label="APK download URL">
+            <Input value={releaseControl.download_url ?? ""} onChange={(e) => setReleaseControl({ ...releaseControl, download_url: e.target.value })} />
+          </FieldLuxe>
+          <FieldLuxe label="What's new — one item per line">
+            <Textarea
+              rows={7}
+              value={(releaseControl.whats_new ?? []).join("\n")}
+              onChange={(e) => setReleaseControl({ ...releaseControl, whats_new: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) })}
+              placeholder={"Example:\n• Fixed admin console scaling\n• Improved notifications\n• Added staged updates"}
+            />
+          </FieldLuxe>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FieldLuxe label="Minimum supported build (0 = none)">
+              <Input type="number" min={0} value={releaseControl.minimum_supported_build ?? 0} onChange={(e) => setReleaseControl({ ...releaseControl, minimum_supported_build: Number(e.target.value) })} />
+            </FieldLuxe>
+            <label className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <span><span className="block text-sm font-bold">Force update</span><span className="block text-[10px] text-muted-foreground">Block the app until this build is installed.</span></span>
+              <Switch checked={!!releaseControl.force_update} onCheckedChange={(v) => setReleaseControl({ ...releaseControl, force_update: v })} />
+            </label>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-primary/20 bg-background/30 p-3">
+              <div className="text-[9px] uppercase tracking-widest text-muted-foreground">Live version</div>
+              <div className="mt-1 text-lg font-black text-foreground">v{releaseControl.latest_version}</div>
+            </div>
+            <div className="rounded-lg border border-primary/20 bg-background/30 p-3">
+              <div className="text-[9px] uppercase tracking-widest text-muted-foreground">Build</div>
+              <div className="mt-1 text-lg font-black text-foreground">{releaseControl.latest_build}</div>
+            </div>
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3">
+              <div className="text-[9px] uppercase tracking-widest text-muted-foreground">Updater state</div>
+              <div className="mt-1 text-sm font-black text-emerald-300">{releaseControl.enabled ? "LIVE" : "STAGED"}</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-background/20 p-3 text-[10px] text-muted-foreground">
+            <span className="font-bold text-foreground">Current production release:</span>
+            <span>release v{releaseControl.latest_version || "—"} • build {releaseControl.latest_build || "—"}</span>
+            <span>•</span>
+            <span>minimum supported build {releaseControl.minimum_supported_build || "—"}</span>
+            <span>•</span>
+            <span>force update {releaseControl.force_update ? "ON" : "OFF"}</span>
+            <Button variant="outline" size="sm" className="ml-auto h-8 px-3 text-[10px] border-primary/40 bg-primary/10 hover:bg-primary/20" onClick={async () => {
+              try {
+                const bust = Date.now();
+                const res = await fetch("/app-release.json?t=" + bust, { cache: "no-store" });
+                if (!res.ok) throw new Error("Could not read the current release metadata.");
+                const manifest = await res.json();
+                const version = String(manifest?.latestVersion ?? "").trim();
+                const build = Number(manifest?.latestBuild ?? 0);
+                if (!version || !build) throw new Error("The current Android version/build could not be detected.");
+                const whatsNew = Array.isArray(manifest?.whatsNew)
+                  ? manifest.whatsNew.filter(Boolean)
+                  : Array.isArray(manifest?.releaseNotes)
+                    ? manifest.releaseNotes.filter(Boolean)
+                    : [];
+                setReleaseControl((prev: any) => ({
+                  ...prev,
+                  enabled: false,
+                  latest_version: version,
+                  latest_build: build,
+                  download_url: String(manifest?.downloadUrl ?? prev.download_url ?? ""),
+                  minimum_supported_build: build,
+                  whats_new: whatsNew,
+                  force_update: false,
+                }));
+                toast.success("Version " + version + " (build " + build + ") loaded and staged. Update was not triggered.");
+              } catch (e: any) {
+                toast.error(e?.message || "Unable to refresh the latest version.");
+              }
+            }}><RotateCw className="h-3.5 w-3.5 mr-1.5" />Refresh version</Button>
+          </div>
+        </Card></div>
+      </div>
+      {/* Keep Android release controls build-safe and explicitly closed. */}
       <div className="space-y-2">
         {filtered.length === 0 && <p className="text-sm text-muted-foreground">No tickets match.</p>}
         {filtered.map((b) => (
           <Card key={b.id} className="glass p-3">
             <div className="flex items-start justify-between gap-3 flex-wrap">
+              <input type="checkbox" checked={selectedBets.has(b.id)} onChange={() => toggleBet(b.id)} className="mt-1 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-xs text-primary font-bold">{b.tracking_id}</span>
@@ -4218,8 +4232,21 @@ function BetTrackerPanel() {
                 </div>
                 <div className="mt-3 grid gap-1.5">
                   {(b.bet_selections ?? []).map((s: any) => (
-                    <div key={s.id} className="rounded-lg border border-border/70 bg-background/30 px-2 py-1.5 text-[11px] text-muted-foreground">
-                      <span className="font-semibold text-foreground">{s.matches?.name ?? "Match"}</span> · {s.selection_label} <span className="font-mono text-primary">@{Number(s.locked_odds).toFixed(2)}</span>
+                    <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/30 px-2 py-1.5 text-[11px] text-muted-foreground">
+                      <span className="min-w-0 truncate">
+                        <span className="font-semibold text-foreground">{s.matches?.name ?? "Match"}</span> · {s.selection_label} <span className="font-mono text-primary">@{Number(s.locked_odds).toFixed(2)}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <Badge variant="outline" className={
+                          s.result === "won" ? "border-emerald-500/50 text-emerald-300 text-[9px]" :
+                          s.result === "lost" ? "border-destructive/50 text-destructive text-[9px]" :
+                          s.result === "void" ? "border-amber-500/50 text-amber-300 text-[9px]" :
+                          "border-muted-foreground/40 text-muted-foreground text-[9px]"
+                        }>{s.result ?? "pending"}</Badge>
+                        <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => toggleSelectionVoid(b, s)}>
+                          {s.result === "void" ? "Unvoid" : "Void"}
+                        </Button>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -5129,133 +5156,31 @@ function TokenMovementPanel() {
             <span className="text-destructive font-bold">− {debits.toLocaleString()}</span>
           </div>
         </div>
-        <div className="flex gap-1 mt-3">
-          {(["all", "credit", "debit"] as const).map((f) => (
-            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} className="text-[10px] capitalize" onClick={() => setFilter(f)}>{f}</Button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(["all", "credit", "debit"] as const).map((value) => (
+            <Button key={value} size="sm" variant={filter === value ? "default" : "outline"} onClick={() => setFilter(value)} className="h-7 px-3 text-[10px] uppercase">
+              {value === "all" ? "All" : value === "credit" ? "Credits" : "Debits"}
+            </Button>
           ))}
         </div>
       </Card>
-      {filtered.length === 0 && <p className="text-muted-foreground text-sm">No token movements.</p>}
-      <div className="grid gap-2">
+      <div className="space-y-2">
+        {filtered.length === 0 && <p className="text-sm text-muted-foreground">No token movements found.</p>}
         {filtered.map((r) => (
-          <Card key={r.id} className="backdrop-blur-2xl bg-card/85 border-primary/20 p-3 flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold uppercase tracking-wider text-primary">{r.kind}</div>
-              <div className="text-xs text-muted-foreground truncate">{r.description ?? "—"}</div>
-              <div className="text-[10px] text-muted-foreground">{new Date(r.created_at).toLocaleString()}</div>
-            </div>
-            <div className="text-right">
-              <div className={`text-base font-black ${r.amount > 0 ? "text-emerald-300" : "text-destructive"}`}>
-                {r.amount > 0 ? "+" : "−"}{Math.abs(r.amount).toLocaleString()}
+          <Card key={r.id} className="glass p-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate">{r.description || r.kind || "Token movement"}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">{r.kind || "—"} · user {r.user_id || "—"} · {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}</div>
               </div>
-              <div className="text-[10px] text-muted-foreground">bal {Number(r.balance_after ?? 0).toLocaleString()}</div>
+              <div className="text-right">
+                <div className={`font-black ${Number(r.amount) >= 0 ? "text-emerald-300" : "text-destructive"}`}>{Number(r.amount) >= 0 ? "+" : ""}{Number(r.amount || 0).toLocaleString()}</div>
+                <div className="text-[9px] text-muted-foreground">Balance after: {Number(r.balance_after || 0).toLocaleString()}</div>
+              </div>
             </div>
           </Card>
         ))}
       </div>
-    </div>
-  );
-}
-
-/**
- * Attendance log — every side marked Present or Absent, with who they were
- * scheduled against and the match timestamp. Filterable by status and name.
- */
-function AttendancePanel() {
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "present" | "absent">("all");
-  const [q, setQ] = useState("");
-
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase
-      .from("matches")
-      .select("id,name,match_kind,status,start_time,settled_at,created_at,home_present,away_present,home_team:teams!home_team_id(name),away_team:teams!away_team_id(name),home_player:players!home_player_id(name),away_player:players!away_player_id(name)")
-      .neq("match_kind", "future")
-      .order("start_time", { ascending: false, nullsFirst: false })
-      .limit(1000);
-    const out: any[] = [];
-    (data ?? []).forEach((m: any) => {
-      const homeName = (m.match_kind === "shooter" ? m.home_player?.name : m.home_team?.name) ?? "Home";
-      const awayName = (m.match_kind === "shooter" ? m.away_player?.name : m.away_team?.name) ?? "Away";
-      const when = m.settled_at ?? m.start_time ?? m.created_at;
-      if (m.home_present !== null && m.home_present !== undefined)
-        out.push({ key: m.id + "-h", name: homeName, present: m.home_present === true, opponent: awayName, match: m.name, kind: m.match_kind, status: m.status, when });
-      if (m.away_present !== null && m.away_present !== undefined)
-        out.push({ key: m.id + "-a", name: awayName, present: m.away_present === true, opponent: homeName, match: m.name, kind: m.match_kind, status: m.status, when });
-    });
-    setRows(out);
-    setLoading(false);
-  }
-  useEffect(() => {
-    load();
-    const ch = supabase.channel("admin-attendance")
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-
-  const filtered = rows.filter((r) => {
-    if (filter === "present" && !r.present) return false;
-    if (filter === "absent" && r.present) return false;
-    if (q.trim()) {
-      const needle = q.trim().toLowerCase();
-      if (!r.name.toLowerCase().includes(needle) && !r.opponent.toLowerCase().includes(needle) && !(r.match ?? "").toLowerCase().includes(needle)) return false;
-    }
-    return true;
-  });
-  const presentCount = rows.filter((r) => r.present).length;
-  const absentCount = rows.length - presentCount;
-
-  return (
-    <div className="space-y-4">
-      <Card className="glass-strong p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Eye className="h-4 w-4 text-primary" />
-          <div className="font-bold tracking-wide">Player Attendance Log</div>
-          <Badge variant="outline" className="ml-auto border-emerald-500/40 text-emerald-400">{presentCount} present</Badge>
-          <Badge variant="outline" className="border-destructive/40 text-destructive">{absentCount} absent</Badge>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[180px]">
-            <Filter className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search player, opponent or match…" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
-          <div className="flex gap-1">
-            {(["all", "present", "absent"] as const).map((f) => (
-              <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} className="capitalize" onClick={() => setFilter(f)}>{f}</Button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      <Card className="border-primary/20 bg-card/60 overflow-hidden">
-        <div className="grid grid-cols-[1.4fr_0.8fr_1.4fr_1.2fr] gap-2 px-3 py-2 border-b border-primary/20 text-[10px] uppercase tracking-widest text-muted-foreground bg-gradient-to-r from-primary/10 to-transparent">
-          <div>Player / Side</div><div>Status</div><div>Scheduled vs</div><div>When</div>
-        </div>
-        <div className="max-h-[60vh] overflow-y-auto divide-y divide-border/40">
-          {loading && <div className="p-3 text-xs text-muted-foreground">Loading…</div>}
-          {!loading && filtered.length === 0 && <div className="p-3 text-xs text-muted-foreground">No attendance records match this filter.</div>}
-          {filtered.map((r) => (
-            <div key={r.key} className="grid grid-cols-[1.4fr_0.8fr_1.4fr_1.2fr] gap-2 px-3 py-2 text-xs items-center hover:bg-primary/5">
-              <div className="min-w-0">
-                <div className="font-bold truncate">{r.name}</div>
-                <div className="text-[9px] text-muted-foreground truncate">{r.match}</div>
-              </div>
-              <div>
-                {r.present ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-400 font-bold"><Check className="h-3 w-3" />Present</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-destructive font-bold"><X className="h-3 w-3" />Absent</span>
-                )}
-              </div>
-              <div className="truncate text-muted-foreground">vs <span className="text-foreground font-semibold">{r.opponent}</span></div>
-              <div className="text-[10px] text-muted-foreground tabular-nums">{r.when ? new Date(r.when).toLocaleString() : "—"}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
     </div>
   );
 }
