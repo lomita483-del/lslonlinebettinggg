@@ -187,7 +187,8 @@ function AdaptiveViewport() {
     // Full-size desktop browsers retain their normal responsive viewport.
     const phoneScreen = Math.min(window.screen.width, window.screen.height) <= 767;
     const phoneViewport = `width=1280, initial-scale=${Math.min(window.screen.width / 1280, 1)}, viewport-fit=cover`;
-    const targetViewport = isAndroidApp ? androidViewport : phoneScreen ? phoneViewport : responsiveViewport;
+    // Admin keeps its 1280px content canvas, but dialogs need real device CSS pixels.
+    const targetViewport = isAdmin ? responsiveViewport : isAndroidApp ? androidViewport : phoneScreen ? phoneViewport : responsiveViewport;
     const apply = () => {
       if (meta.getAttribute("content") !== targetViewport) meta.setAttribute("content", targetViewport);
     };
