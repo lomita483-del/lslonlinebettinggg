@@ -1,20 +1,50 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, User as UserIcon, Shield, MessageSquare, Home, Trophy, Ticket, LifeBuoy, Wallet, Crosshair as MatchIcon, Settings as SettingsIcon, Coins, LayoutDashboard, Dice5, Swords, Clover, ListChecks, Gamepad2, ShoppingBag } from "lucide-react";
+import {
+  LogOut,
+  User as UserIcon,
+  Shield,
+  MessageSquare,
+  Home,
+  Trophy,
+  Ticket,
+  LifeBuoy,
+  Wallet,
+  Crosshair as MatchIcon,
+  Settings as SettingsIcon,
+  Coins,
+  LayoutDashboard,
+  Dice5,
+  Swords,
+  Clover,
+  ListChecks,
+  ClipboardCheck,
+  Gamepad2,
+  ShoppingBag,
+  Download,
+  Bot,
+} from "lucide-react";
 import { GangLogo } from "@/components/GangLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth, ROLE_COLORS, ROLE_LABELS } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
+import { AppDownloadReminder } from "@/components/AppDownloadReminder";
 import { LevelUpModal } from "@/components/Spotlight";
 import { GlobalWinAnimation } from "@/components/GlobalWinAnimation";
+import { GlobalLossAnimation } from "@/components/GlobalLossAnimation";
+import { WagerMilestone } from "@/components/WagerMilestone";
 import { BetSuccessPopout } from "@/components/BetSuccessPopout";
 import { SurveyPopout } from "@/components/SurveyPopout";
 import { PollPopout } from "@/components/PollPopout";
-import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
-import { ReactNode, useEffect, useState } from "react";
+import { FloatingWidgets } from "@/components/FloatingWidgets";
+import { PageTour } from "@/components/PageTour";
+import { LuckyWheelPopout } from "@/components/LuckyWheelPopout";
+import { AdvertisementRow } from "@/components/AdvertisementRow";
+import { VideoAd } from "@/components/VideoAd";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "@tanstack/react-router";
-import lslPlatformBg from "@/assets/lsl-bg-nebula.png.asset.json";
+import { useBranding } from "@/lib/branding";
 
 // Site-wide background ticker so virtual rounds keep advancing even when
 // no one is on /virtual. Any authenticated client pings every 15s.
@@ -23,10 +53,20 @@ function useVirtualHeartbeat() {
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    const ping = () => { supabase.rpc("virtual_tick").then(() => {}, () => {}); };
+    const ping = () => {
+      supabase.rpc("virtual_tick").then(
+        () => {},
+        () => {},
+      );
+    };
     ping();
-    const t = setInterval(() => { if (alive) ping(); }, 15000);
-    return () => { alive = false; clearInterval(t); };
+    const t = setInterval(() => {
+      if (alive) ping();
+    }, 15000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
   }, [user]);
 }
 
@@ -36,27 +76,125 @@ function useForceReloadBroadcast() {
     if (typeof window === "undefined") return;
     const KEY = "lsl-last-force-reload";
     let seen = localStorage.getItem(KEY) ?? "";
-    supabase.from("app_settings").select("force_reload_at").eq("id", 1).maybeSingle().then(({ data }) => {
-      const v = (data as any)?.force_reload_at as string | null;
-      if (v && !seen) { localStorage.setItem(KEY, v); seen = v; }
-    });
-    const ch = supabase.channel("force-reload")
+    supabase
+      .from("app_settings")
+      .select("force_reload_at")
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data }) => {
+        const v = (data as any)?.force_reload_at as string | null;
+        if (v && !seen) {
+          localStorage.setItem(KEY, v);
+          seen = v;
+        }
+      });
+    const ch = supabase
+      .channel("force-reload")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings" }, (p: any) => {
         const v = p.new?.force_reload_at as string | null;
-        if (v && v !== seen) { localStorage.setItem(KEY, v); window.location.reload(); }
+        if (v && v !== seen) {
+          localStorage.setItem(KEY, v);
+          window.location.reload();
+        }
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
+}
+
+type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
+
+function isStandalone() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    // @ts-ignore iOS legacy
+    (window.navigator as any).standalone === true
+  );
+}
+
+/** Captures the browser's install prompt so a header button can trigger it directly. */
+function useInstallPrompt() {
+  const [deferred, setDeferred] = useState<BIPEvent | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined" || isStandalone()) return;
+    const onBIP = (e: Event) => {
+      e.preventDefault();
+      setDeferred(e as BIPEvent);
+    };
+    window.addEventListener("beforeinstallprompt", onBIP);
+    return () => window.removeEventListener("beforeinstallprompt", onBIP);
+  }, []);
+  const promptInstall = async () => {
+    if (!deferred) return;
+    try {
+      await deferred.prompt();
+      await deferred.userChoice;
+      setDeferred(null);
+    } catch {
+      /* ignore */
+    }
+  };
+  return { canInstall: !!deferred, promptInstall };
+}
+
+/**
+ * Renders the header on a fixed 1280px desktop canvas and scales it down to the
+ * device width, so /admin keeps the exact one-row desktop top bar on phones.
+ */
+function DesktopCanvas({ active, children }: { active: boolean; children: ReactNode }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!active) return;
+    const host = hostRef.current;
+    const inner = innerRef.current;
+    if (!host || !inner) return;
+    const recompute = () => {
+      const w = host.clientWidth;
+      if (w <= 0) return;
+      const s = Math.min(w / 1280, 1);
+      setScale(s);
+      setHeight(inner.offsetHeight * s);
+    };
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(host);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, [active]);
+
+  if (!active) return <>{children}</>;
+
+  return (
+    <div ref={hostRef} className="w-full overflow-hidden" style={{ height }}>
+      <div ref={innerRef} style={{ width: 1280, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { user, profile, roles, isAdmin, isMod, signOut } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const nav = useNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+  // The admin console renders on a fixed desktop canvas; keep the site header on
+  // the same canvas so the top bar never reflows into the stacked mobile rows.
   useVirtualHeartbeat();
   useForceReloadBroadcast();
+  const { canInstall, promptInstall } = useInstallPrompt();
   const [railOpen, setRailOpen] = useState(false);
-  // Admin-configurable site-wide background + branding (fall back to bundled art).
+  const branding = useBranding();
+
+  // Admin-configurable site-wide background + branding.
   const [siteBg, setSiteBg] = useState<string | null>(null);
   const [bgFit, setBgFit] = useState<string>("cover");
   const [bgPos, setBgPos] = useState<string>("center");
@@ -74,26 +212,35 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       setNavBgFit(d?.nav_bg_fit ?? "cover");
       setNavBgPos(d?.nav_bg_position ?? "center");
     };
-    supabase.from("app_settings").select("site_bg_url,site_bg_fit,site_bg_position,site_name,nav_bg_url,nav_bg_fit,nav_bg_position").eq("id", 1).maybeSingle()
+    supabase
+      .from("app_settings")
+      .select("site_bg_url,site_bg_fit,site_bg_position,site_name,nav_bg_url,nav_bg_fit,nav_bg_position")
+      .eq("id", 1)
+      .maybeSingle()
       .then(({ data }) => apply(data));
-    const ch = supabase.channel("site-bg")
+    const ch = supabase
+      .channel("site-bg")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings" }, (p: any) => apply(p.new))
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   return (
     <div className="relative min-h-screen">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <img
-          src={siteBg || lslPlatformBg.url}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full"
-          style={{ objectFit: (bgFit as any) || "cover", objectPosition: bgPos || "center" }}
-        />
-        <div className="absolute inset-0 bg-background/40" />
-      </div>
+      {siteBg && (
+        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <img
+            src={siteBg}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full"
+            style={{ objectFit: (bgFit as any) || "cover", objectPosition: bgPos || "center" }}
+          />
+          <div className="absolute inset-0 bg-background/40" />
+        </div>
+      )}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-b from-card/80 to-card/50 border-b border-primary/20 shadow-[0_2px_30px_-12px_rgba(0,0,0,0.6)]">
         {navBg && (
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -107,165 +254,314 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             <div className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/45 to-background/65" />
           </div>
         )}
+        <DesktopCanvas active={true}>
         <div className="container mx-auto px-4 flex h-16 items-center gap-3 lg:gap-4 relative">
           <Link to="/" className="flex items-center gap-2 group shrink-0">
-            <GangLogo size={38} className="transition-transform group-hover:scale-105 group-hover:rotate-3 duration-300" />
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.name}
+                className="h-[38px] w-[38px] object-contain rounded transition-transform group-hover:scale-105 group-hover:rotate-3 duration-300"
+              />
+            ) : (
+              <GangLogo
+                size={38}
+                className="transition-transform group-hover:scale-105 group-hover:rotate-3 duration-300"
+              />
+            )}
             <div className="leading-tight">
-              {siteName ? (
-                <div className="text-sm font-extrabold tracking-[0.18em] gradient-gold-text uppercase max-w-[160px] truncate">{siteName}</div>
+              {branding.name && branding.name !== "LSL" ? (
+                <>
+                  <div className="text-sm font-extrabold tracking-[0.18em] gradient-gold-text uppercase max-w-[160px] truncate">
+                    {branding.name}
+                  </div>
+                  {branding.tagline && (
+                    <div className="text-[9px] text-muted-foreground tracking-[0.25em] uppercase max-w-[160px] truncate">
+                      {branding.tagline}
+                    </div>
+                  )}
+                </>
+              ) : siteName ? (
+                <div className="text-sm font-extrabold tracking-[0.18em] gradient-gold-text uppercase max-w-[160px] truncate">
+                  {siteName}
+                </div>
               ) : (
                 <>
-                  <div className="text-sm font-extrabold tracking-[0.25em] gradient-gold-text">LOMITA</div>
-                  <div className="text-[9px] text-muted-foreground tracking-[0.35em]">SHOOTERS LEAGUE</div>
+                  <div className="text-sm font-extrabold tracking-[0.25em] gradient-gold-text">EFOOTBALL</div>
+                  <div className="text-[9px] text-muted-foreground tracking-[0.35em]">COMPETITION BETTING</div>
                 </>
               )}
             </div>
           </Link>
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-1 flex-nowrap">
-            <NavLink to="/matches" icon={MatchIcon} label="Matches" />
-            <NavLink to="/virtual" icon={Dice5} label="Virtual" />
-            <NavLink to="/lottery" icon={Clover} label="Lottery" />
-            <NavLink to="/arcade" icon={Gamepad2} label="Arcade" />
-            <NavLink to="/shop" icon={ShoppingBag} label="Shop" />
-            <NavLink to="/leaderboard" icon={Trophy} label="Leaderboard" />
-            <NavLink to="/tournament" icon={Swords} label="Tournament" />
-            {user && <NavLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" />}
-            {user && <NavLink to="/tasks" icon={ListChecks} label="Tasks" />}
-            {user && <NavLink to="/checkout" icon={Coins} label="Buy" />}
-            {user && <NavLink to="/withdraw" icon={Wallet} label="Withdraw" />}
-            {user && <NavLink to="/support" icon={LifeBuoy} label="Support" />}
-            {user && <NavLink to="/settings" icon={SettingsIcon} label="Settings" />}
-            {isAdmin && <NavLink to="/admin" icon={Shield} label="Admin" danger />}
-            {!isAdmin && isMod && <NavLink to="/mod" icon={Shield} label="Mod" danger />}
-          </nav>
-          <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
+          <div className="flex items-center gap-2 shrink-0 ml-auto sticky right-0 bg-gradient-to-l from-card/95 via-card/80 to-transparent pl-3">
+            {branding.logoCornerUrl && (
+              <img
+                src={branding.logoCornerUrl}
+                alt={branding.name}
+                className="h-8 w-8 rounded-full object-cover border border-primary/30 shadow-gold hidden sm:block"
+                title={`${branding.name} — corner logo`}
+              />
+            )}
             <Link to="/shop" title="Rewards Shop" aria-label="Rewards Shop">
-              <Button variant="ghost" size="icon" className="rounded-full border border-transparent hover:border-primary/30">
-                <ShoppingBag className="h-4 w-4 text-primary" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 shadow-[0_0_12px_-4px_rgba(212,175,55,0.6)]"
+              >
+                <ShoppingBag className="h-5 w-5 text-primary" />
               </Button>
             </Link>
             {user && profile ? (
               <>
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-gradient-to-r from-primary/10 to-accent/5 shadow-[0_0_15px_-5px_rgba(212,175,55,0.4)]">
-                  <Coins className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-sm font-black text-primary leading-none tabular-nums">{profile.token_balance.toLocaleString()}</span>
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-primary/50 bg-gradient-to-r from-primary/20 to-accent/10 shadow-[0_0_18px_-4px_rgba(212,175,55,0.7)]">
+                  <Coins className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-black text-primary leading-none tabular-nums">
+                    {profile.token_balance.toLocaleString()}
+                  </span>
                 </div>
                 <NotificationBell />
                 <Link to="/profile">
-                  <Button variant="ghost" size="sm" className="gap-2 rounded-full border border-transparent hover:border-primary/30">
-                    <span className="h-6 w-6 rounded-full bg-gradient-to-br from-primary/40 to-accent/30 grid place-items-center"><UserIcon className="h-3.5 w-3.5" /></span>
-                    <span className="hidden xl:inline text-xs font-semibold max-w-[100px] truncate">{profile.full_name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 gap-2 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 shadow-[0_0_12px_-4px_rgba(212,175,55,0.5)]"
+                  >
+                    <span className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-background">
+                      <UserIcon className="h-4 w-4" />
+                    </span>
+                    <span className="hidden xl:inline text-xs font-semibold max-w-[100px] truncate">
+                      {profile.full_name}
+                    </span>
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={async () => { await signOut(); nav({ to: "/" }); }} title="Sign out">
-                  <LogOut className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 shadow-[0_0_12px_-4px_rgba(239,68,68,0.5)]"
+                  onClick={async () => {
+                    await signOut();
+                    nav({ to: "/" });
+                  }}
+                  title="Sign out"
+                >
+                  <LogOut className="h-5 w-5" />
                 </Button>
               </>
             ) : (
               <>
-                <Link to="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
-                <Link to="/register"><Button size="sm" className="btn-luxury">Join League</Button></Link>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">
+                    Sign in
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm" className="btn-luxury">
+                    Join League
+                  </Button>
+                </Link>
               </>
             )}
           </div>
         </div>
-        {user && roles.length > 0 && (
-          <div className="container mx-auto px-4 pb-2 flex flex-wrap gap-1">
-            {roles.map((r) => <Badge key={r} variant="outline" className={ROLE_COLORS[r]}>{ROLE_LABELS[r]}</Badge>)}
+        {!isHome && (
+          <div className="border-t border-primary/15 bg-background/20">
+            <div className="container mx-auto px-4 relative">
+              <nav data-tour="top-navigation" className="flex items-stretch gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-2">
+                {(() => {
+                  const rest: { to: string; icon: any; label: string; danger?: boolean }[] = [
+                    { to: "/matches", icon: MatchIcon, label: "Matches" },
+                    { to: "/virtual", icon: Dice5, label: "Virtual" },
+                    { to: "/lottery", icon: Clover, label: "Lottery" },
+                    { to: "/arcade", icon: Gamepad2, label: "Arcade" },
+                    { to: "/shop", icon: ShoppingBag, label: "Shop" },
+                    { to: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+                    { to: "/tournament", icon: Swords, label: "Tournament" },
+                    ...(user
+                      ? [
+                          { to: "/wagers", icon: Swords, label: "Wagers" },
+                          { to: "/chat", icon: MessageSquare, label: "Chat" },
+                          { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+                          { to: "/checkout", icon: Coins, label: "Buy" },
+                          { to: "/withdraw", icon: Wallet, label: "Withdraw" },
+                          { to: "/support", icon: LifeBuoy, label: "Support" },
+                          { to: "/settings", icon: SettingsIcon, label: "Settings" },
+                        ]
+                      : []),
+                    ...(!isAdmin && isMod ? [{ to: "/mod", icon: Shield, label: "Mod", danger: true }] : []),
+                    { to: "/mcp-docs", icon: Bot, label: "MCP" },
+                  ].sort((a, b) => a.label.localeCompare(b.label));
+                  const first = isAdmin
+                    ? { to: "/admin", icon: Shield, label: "Admin", danger: true }
+                    : { to: "/", icon: Home, label: "Home" };
+                  const items = isAdmin ? [first, { to: "/", icon: Home, label: "Home" }, ...rest] : [first, ...rest];
+                  return items.map((it) => (
+                    <NavLink key={it.to} to={it.to} icon={it.icon} label={it.label} danger={it.danger} />
+                  ));
+                })()}
+              </nav>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 right-0 top-0 w-10 bg-gradient-to-l from-background/70 to-transparent"
+              />
+            </div>
           </div>
         )}
+        {(user && roles.length > 0) || canInstall ? (
+          <div className="container mx-auto px-4 pb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1">
+              {roles.map((r) => (
+                <Badge key={r} variant="outline" className={ROLE_COLORS[r]}>
+                  {ROLE_LABELS[r]}
+                </Badge>
+              ))}
+            </div>
+            {canInstall && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                onClick={promptInstall}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download App
+              </Button>
+            )}
+          </div>
+        ) : null}
+        </DesktopCanvas>
       </header>
-      <main className="relative lg:pl-0 pl-16 overflow-x-hidden">{children}</main>
+      <DesktopCanvas active={true}>
+        <main className="relative overflow-x-hidden">{children}</main>
+        <div className="container pb-4" data-tour="page-ads">
+          <AdvertisementRow placement={location.pathname} />
+        </div>
+        <SiteFooter isHome={isHome} />
+      </DesktopCanvas>
       <LevelUpModal />
       <GlobalWinAnimation />
+      <GlobalLossAnimation />
+      <WagerMilestone />
       <BetSuccessPopout />
       <SurveyPopout />
       <PollPopout />
-      <PushPermissionPrompt />
-      <nav
-        className="lg:hidden fixed left-0 inset-y-0 pt-16 z-40 w-16 overflow-y-auto bg-transparent border-0 shadow-none"
-      >
-        <div className="flex flex-col items-stretch gap-4 py-4 px-1">
-          <button
-            type="button"
-            onClick={() => setRailOpen((v) => !v)}
-            aria-expanded={railOpen}
-            aria-label={railOpen ? "Collapse menu" : "Expand menu"}
-            className="group relative flex flex-col items-center justify-center gap-1 px-0 py-1 rounded-xl text-[10px] font-semibold tracking-wide text-primary transition-all hover:text-foreground active:scale-95"
-            title="Menu"
-          >
-            <span className="relative grid place-items-center h-[52px] w-[52px] rounded-xl bg-gradient-to-br from-primary/25 to-primary/5 shadow-[0_0_18px_-4px_rgba(212,175,55,0.55)]">
-              <SettingsIcon className={`h-7 w-7 transition-transform ${railOpen ? "rotate-180" : ""}`} />
-            </span>
-            <span className="leading-none text-[9px]">{railOpen ? "Less" : "More"}</span>
-          </button>
-          <MobLink to="/" icon={Home} label="Home" />
-          {railOpen && <>
-          <MobLink to="/matches" icon={MatchIcon} label="Matches" />
-          <MobLink to="/virtual" icon={Dice5} label="Virtual" />
-          <MobLink to="/lottery" icon={Clover} label="Lottery" />
-          <MobLink to="/arcade" icon={Gamepad2} label="Arcade" />
-          <MobLink to="/leaderboard" icon={Trophy} label="Top" />
-          <MobLink to="/tournament" icon={Swords} label="Bracket" />
-          {user && <>
-            <MobLink to="/dashboard" icon={Ticket} label="ME" />
-            <MobLink to="/tasks" icon={ListChecks} label="Tasks" />
-            <MobLink to="/profile" icon={UserIcon} label="Profile" />
-            <MobLink to="/settings" icon={SettingsIcon} label="Settings" />
-            <MobLink to="/support" icon={LifeBuoy} label="Help" />
-          </>}
-          {isAdmin && <MobLink to="/admin" icon={Shield} label="Admin" />}
-          {!isAdmin && isMod && <MobLink to="/mod" icon={Shield} label="Mod" />}
-          </>}
-        </div>
-      </nav>
-      <div className="lg:hidden h-0" />
-      <SiteFooter />
+      <FloatingWidgets />
+      <LuckyWheelPopout />
+      <PageTour />
+      <VideoAd />
+      <AppDownloadReminder />
     </div>
   );
 };
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-function SiteFooter() {
+function SiteFooter({ isHome = false }: { isHome?: boolean }) {
   const [s, setS] = useState<any>(null);
+  const [appVersion, setAppVersion] = useState(() => {
+    if (typeof window !== "undefined") {
+      const nativeVersion = (window as any).LSL_ANDROID_APP_VERSION;
+      if (nativeVersion) return String(nativeVersion);
+    }
+    return "1.0.71";
+  });
   const [open, setOpen] = useState<"terms" | "about" | null>(null);
   useEffect(() => {
-    supabase.from("app_settings")
+    if (typeof window !== "undefined") {
+      const nativeVersion = (window as any).LSL_ANDROID_APP_VERSION;
+      if (nativeVersion) setAppVersion(String(nativeVersion));
+    }
+    if (typeof window !== "undefined" && navigator.userAgent.includes("LSLAndroidApp/")) return;
+
+    supabase
+      .from("app_settings")
       .select("site_name,about_us,why_trust_us,terms_content,contact_email,contact_phone,contact_whatsapp")
-      .eq("id", 1).maybeSingle().then(({ data }) => setS(data));
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data }) => setS(data));
+    fetch("/api/public/app-release?t=" + Date.now(), {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.latestVersion) setAppVersion(String(data.latestVersion));
+      })
+      .catch(() => {
+        // Keep the bundled fallback version visible if the release endpoint is unavailable.
+      });
   }, []);
   return (
-    <footer className="border-t border-border mt-20 backdrop-blur-xl bg-card/40 lg:pl-0 pl-16">
+    <footer className="border-t border-border mt-20 backdrop-blur-xl bg-card/40">
       <div className="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-6 text-sm">
         <div>
-          <div className="flex items-center gap-2 mb-2"><GangLogo size={28} withGlow={false} /><span className="font-bold tracking-widest gradient-gold-text uppercase">{s?.site_name || "LOMITA SHOOTERS LEAGUE"}</span></div>
+          <div className="flex items-center gap-2 mb-2">
+            <GangLogo size={28} withGlow={false} />
+            <span className="font-bold tracking-widest gradient-gold-text uppercase">
+              {s?.site_name || "E-FOOTBALL COMPETITION BET"}
+            </span>
+          </div>
           <p className="text-muted-foreground text-xs">Virtual token-only platform · No real money gambling.</p>
         </div>
         <div>
           <div className="font-bold mb-2">About</div>
-          <p className="text-muted-foreground text-xs line-clamp-3">{s?.about_us ?? "The premier virtual shooting circuit."}</p>
+          <p className="text-muted-foreground text-xs line-clamp-3">
+            {s?.about_us ?? "The premier virtual shooting circuit."}
+          </p>
           <div className="flex gap-3 mt-2 text-xs">
-            <button className="text-primary hover:underline" onClick={() => setOpen("about")}>Read more</button>
-            <button className="text-primary hover:underline" onClick={() => setOpen("terms")}>Terms & Conditions</button>
-            <Link to="/faq" className="text-primary hover:underline">Help & FAQ</Link>
+            <button className="text-primary hover:underline" onClick={() => setOpen("about")}>
+              Read about the league
+            </button>
+            <button className="text-primary hover:underline" onClick={() => setOpen("terms")}>
+              Terms & Conditions
+            </button>
+            <Link to="/faq" className="text-primary hover:underline">
+              Help & FAQ
+            </Link>
+            <Link to="/mcp-docs" className="text-primary hover:underline">
+              MCP Agent Tools
+            </Link>
           </div>
         </div>
         <div>
           <div className="font-bold mb-2">Contact</div>
           <ul className="text-muted-foreground text-xs space-y-1">
-            {s?.contact_email && <li>Email: <a href={`mailto:${s.contact_email}`} className="text-primary">{s.contact_email}</a></li>}
+            {s?.contact_email && (
+              <li>
+                Email:{" "}
+                <a href={`mailto:${s.contact_email}`} className="text-primary">
+                  {s.contact_email}
+                </a>
+              </li>
+            )}
             {s?.contact_phone && <li>Phone: {s.contact_phone}</li>}
             {s?.contact_whatsapp && <li>WhatsApp: {s.contact_whatsapp}</li>}
           </ul>
         </div>
       </div>
+      <div className="container mx-auto px-4 pb-6 flex justify-end">
+        <div
+          data-app-version={appVersion}
+          className="min-w-max rounded-full border border-primary/35 bg-background/70 px-3.5 py-1.5 text-right shadow-[0_0_14px_-6px_rgba(212,175,55,0.7)]"
+          title="Current app release"
+        >
+          <span className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            App version {appVersion}
+          </span>
+        </div>
+      </div>
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{open === "terms" ? "Terms & Conditions" : "About Us"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{open === "terms" ? "Terms & Conditions" : "About Us"}</DialogTitle>
+          </DialogHeader>
           <div className="text-sm whitespace-pre-wrap text-muted-foreground">
             {open === "terms" ? (s?.terms_content ?? "Terms not set.") : (s?.about_us ?? "About not set.")}
-            {open === "about" && s?.why_trust_us && <><div className="font-bold mt-4 text-foreground">Why trust us</div>{s.why_trust_us}</>}
+            {open === "about" && s?.why_trust_us && (
+              <>
+                <div className="font-bold mt-4 text-foreground">Why trust us</div>
+                {s.why_trust_us}
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -273,39 +569,101 @@ function SiteFooter() {
   );
 }
 
-function MobLink({ to, icon: Icon, label, badge }: { to: string; icon: any; label: string; badge?: number }) {
+function MobLink({
+  to,
+  icon: Icon,
+  label,
+  badge,
+  danger,
+}: {
+  to: string;
+  icon: any;
+  label: string;
+  badge?: number;
+  danger?: boolean;
+}) {
   return (
     <Link
       to={to}
       activeProps={{ className: "active" }}
-      className="group relative flex flex-col items-center justify-center gap-1 px-0 py-1 rounded-xl text-[10px] font-semibold tracking-wide text-muted-foreground transition-all duration-200 hover:text-foreground active:scale-95 [&.active]:text-primary"
+      className={`group relative flex flex-col items-center justify-center gap-1.5 px-0 py-1 rounded-xl text-[10px] font-semibold tracking-wide transition-all duration-300 active:scale-95
+        ${danger ? "text-destructive/85 hover:text-destructive [&.active]:text-destructive" : "text-foreground/55 hover:text-primary [&.active]:text-primary"}`}
       title={label}
     >
-      <span className="pointer-events-none absolute left-0 inset-y-2 w-[2px] rounded-full bg-gradient-to-b from-transparent via-primary to-transparent opacity-0 group-[.active]:opacity-100 transition-opacity" />
-      <span className="relative grid place-items-center h-[52px] w-[52px] rounded-xl transition-all group-[.active]:bg-gradient-to-br group-[.active]:from-primary/25 group-[.active]:to-primary/5 group-[.active]:shadow-[0_0_18px_-4px_rgba(212,175,55,0.55)]">
-        <Icon className="h-7 w-7 transition-transform group-[.active]:scale-110" />
+      {/* left rail active indicator — thin gold line */}
+      <span className="pointer-events-none absolute -left-1.5 inset-y-3 w-[2px] rounded-full bg-gradient-to-b from-transparent via-primary to-transparent opacity-0 group-[.active]:opacity-100 transition-opacity duration-500 shadow-[0_0_8px_hsl(var(--primary))]" />
+      <span
+        className="relative grid place-items-center h-[50px] w-[50px] rounded-[14px] transition-all duration-300
+          border border-white/[0.06] group-hover:border-primary/40 group-[.active]:border-primary/70
+          bg-[linear-gradient(155deg,rgba(30,26,22,0.9)_0%,rgba(14,12,10,0.95)_50%,rgba(8,7,6,1)_100%)]
+          shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-1px_0_rgba(0,0,0,0.6),0_2px_10px_-2px_rgba(0,0,0,0.8)]
+          group-hover:shadow-[inset_0_1px_0_rgba(212,175,55,0.25),inset_0_-1px_0_rgba(0,0,0,0.6),0_4px_18px_-4px_rgba(212,175,55,0.35)]
+          group-[.active]:shadow-[inset_0_1px_0_rgba(212,175,55,0.4),inset_0_-1px_0_rgba(0,0,0,0.6),0_6px_22px_-4px_rgba(212,175,55,0.55)]"
+      >
+        {/* engraved bevel */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-[1px] rounded-[13px] opacity-60"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.35) 100%)",
+          }}
+        />
+        {/* top gloss highlight */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-2 top-[2px] h-[10px] rounded-full opacity-60"
+          style={{ background: "radial-gradient(60% 100% at 50% 0%, rgba(255,255,255,0.18), transparent 70%)" }}
+        />
+        {/* gold ring on hover/active */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[14px] opacity-0 group-hover:opacity-100 group-[.active]:opacity-100 transition-opacity duration-500"
+          style={{
+            background:
+              "radial-gradient(85% 70% at 50% 50%, transparent 55%, rgba(212,175,55,0.12) 78%, transparent 100%)",
+          }}
+        />
+        <Icon
+          className="relative h-[22px] w-[22px] transition-all duration-300 group-hover:scale-110 group-[.active]:scale-110"
+          strokeWidth={1.6}
+        />
         {badge && badge > 0 ? (
-          <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-black grid place-items-center ring-2 ring-card animate-pulse">
+          <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-gradient-to-b from-destructive to-destructive/70 text-destructive-foreground text-[9px] font-black grid place-items-center ring-2 ring-background shadow-[0_2px_8px_rgba(220,38,38,0.5)] animate-pulse">
             {badge > 9 ? "9+" : badge}
           </span>
         ) : null}
       </span>
-      <span className="leading-none text-[9px] truncate max-w-[56px]">{label}</span>
+      <span className="leading-none text-[8.5px] truncate max-w-[56px] uppercase tracking-[0.18em] font-bold text-foreground/60 group-hover:text-foreground/90 group-[.active]:text-primary transition-colors">
+        {label}
+      </span>
     </Link>
   );
 }
 
-function NavLink({ to, icon: Icon, label, badge, danger }: { to: string; icon: any; label: string; badge?: number; danger?: boolean }) {
+function NavLink({
+  to,
+  icon: Icon,
+  label,
+  badge,
+  danger,
+}: {
+  to: string;
+  icon: any;
+  label: string;
+  badge?: number; 
+  danger?: boolean;
+}) {
   return (
     <Link
       to={to}
       activeProps={{ className: "active" }}
-      className={`group relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all
-        text-muted-foreground hover:text-foreground hover:bg-primary/5
-        [&.active]:text-primary [&.active]:bg-gradient-to-b [&.active]:from-primary/15 [&.active]:to-primary/5
+      className={`group relative flex h-11 shrink-0 items-center justify-center gap-2 px-4 rounded-lg text-sm font-bold tracking-wide transition-all border whitespace-nowrap
+        text-foreground border-primary/45 bg-card/90 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.7)] hover:bg-primary/20 hover:border-primary/70
+        [&.active]:text-primary [&.active]:bg-gradient-to-b [&.active]:from-primary/25 [&.active]:to-primary/10 [&.active]:border-primary/60 [&.active]:shadow-[0_0_14px_-4px_rgba(212,175,55,0.6)]
         ${danger ? "hover:text-destructive [&.active]:!text-destructive [&.active]:!from-destructive/15 [&.active]:!to-destructive/5" : ""}`}
     >
-      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <Icon className="h-4 w-4 shrink-0" />
       <span>{label}</span>
       {badge && badge > 0 ? (
         <span className="ml-0.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-black grid place-items-center animate-pulse">
