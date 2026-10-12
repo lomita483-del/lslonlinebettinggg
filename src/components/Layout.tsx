@@ -157,7 +157,7 @@ function DesktopCanvas({ active, children }: { active: boolean; children: ReactN
     const recompute = () => {
       const w = host.clientWidth;
       if (w <= 0) return;
-      const s = Math.min(w / 1280, 1) * (window.innerWidth <= 640 ? 0.85 : 1);
+      const s = Math.min(w / 1280, 1);
       setScale(s);
       setHeight(inner.offsetHeight * s);
     };
@@ -227,7 +227,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="lsl-mobile-layout-scale relative min-h-screen">
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-b from-card/80 to-card/50 border-b border-primary/20 shadow-[0_2px_30px_-12px_rgba(0,0,0,0.6)]">
         {navBg && (
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
