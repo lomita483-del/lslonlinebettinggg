@@ -194,9 +194,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const branding = useBranding();
 
   // Admin-configurable site-wide background + branding.
-  const [siteBg, setSiteBg] = useState<string | null>(null);
-  const [bgFit, setBgFit] = useState<string>("cover");
-  const [bgPos, setBgPos] = useState<string>("center");
+  const [_siteBg, setSiteBg] = useState<string | null>(null);
+  const [_bgFit, setBgFit] = useState<string>("cover");
+  const [_bgPos, setBgPos] = useState<string>("center");
   const [siteName, setSiteName] = useState<string | null>(null);
   const [navBg, setNavBg] = useState<string | null>(null);
   const [navBgFit, setNavBgFit] = useState<string>("cover");
@@ -227,20 +227,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen isolate bg-background">
-      {!siteBg && <div aria-hidden="true" className="lsl-atmosphere pointer-events-none fixed inset-0" />}
-      {siteBg && (
-        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-          <img
-            src={siteBg}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 h-full w-full"
-            style={{ objectFit: (bgFit as any) || "cover", objectPosition: bgPos || "center" }}
-          />
-          <div className="absolute inset-0 bg-background/40" />
-        </div>
-      )}
+    <div className="relative min-h-screen">
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-b from-card/80 to-card/50 border-b border-primary/20 shadow-[0_2px_30px_-12px_rgba(0,0,0,0.6)]">
         {navBg && (
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
