@@ -3923,30 +3923,30 @@ function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string)
         </button>
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[min(94vw,420px)] max-w-none h-[min(66dvh,530px)] max-h-[530px] flex flex-col overflow-hidden rounded-[2.5rem] border-[7px] border-slate-800 bg-gradient-to-b from-indigo-950 via-violet-900 to-orange-600 p-0 text-white shadow-2xl [&>button]:hidden">
-          <div className="flex items-center justify-between gap-2 border-b border-white/20 px-4 py-3">
+        <DialogContent className="fixed !left-1/2 !top-auto !bottom-0 !-translate-x-1/2 !translate-y-0 w-[min(100vw,480px)] max-w-none h-[min(62dvh,510px)] max-h-[510px] flex flex-col overflow-hidden rounded-t-[2rem] rounded-b-none border border-primary/40 bg-card p-0 text-card-foreground shadow-2xl [&>button]:hidden">
+          <div className="flex items-center justify-between gap-2 shrink-0 border-b border-border px-4 py-3">
             <div>
-              <DialogTitle className="text-base font-black text-white">Quick Action</DialogTitle>
-              <p className="text-xs text-white/75">Admin command center · {actions.length} tools</p>
+              <DialogTitle className="text-base font-black text-primary">Quick Action</DialogTitle>
+              <p className="text-xs text-muted-foreground">Admin command center · {actions.length} tools</p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900">✕ Close</button>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-bold text-foreground">✕ Close</button>
           </div>
           <div className="shrink-0 px-4 pt-2">
             <Input value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Search admin tools…" aria-label="Search quick actions"
-              className="border-white/30 bg-black/25 text-white placeholder:text-white/60" />
+              className="border-border bg-background text-foreground placeholder:text-muted-foreground" />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y px-4 pb-5 pt-3">
-            {filtered.length === 0 ? <p className="py-8 text-center text-sm text-white/80">No matching actions.</p> :
+          <div className="min-h-0 flex-1 overflow-y-scroll overscroll-contain touch-pan-y px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3">
+            {filtered.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">No matching actions.</p> :
             <div className="grid grid-cols-4 gap-x-2 gap-y-4">
               {filtered.map((action, index) => {
-                const colors = ["from-pink-500 to-rose-600", "from-indigo-400 to-blue-700", "from-emerald-400 to-green-700", "from-amber-400 to-orange-600", "from-violet-400 to-purple-700", "from-cyan-400 to-sky-700"];
+                const color = QA_PALETTE[actions.findIndex(a => a.t === action.t) % QA_PALETTE.length];
                 return <button key={action.t} type="button" onClick={() => choose(action.t)}
-                  className="group flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
-                  <span className={`grid aspect-square w-full max-w-[64px] place-items-center rounded-[16px] bg-gradient-to-br ${colors[index % colors.length]} shadow-lg ring-1 ring-white/20 transition group-active:scale-95`}>
-                    <action.i className="h-7 w-7 text-white drop-shadow-md" />
+                  className="group flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                  <span className={`grid aspect-square w-full max-w-[64px] place-items-center rounded-xl border bg-background/60 shadow-sm transition group-active:scale-95 ${color.bd}`}>
+                    <action.i className={`h-7 w-7 ${color.ic}`} />
                   </span>
-                  <span className="min-h-[2em] text-[10px] font-medium leading-tight text-white">{action.l}</span>
+                  <span className="min-h-[2em] text-[10px] font-medium leading-tight text-foreground">{action.l}</span>
                 </button>;
               })}
             </div>}
