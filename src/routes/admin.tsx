@@ -1352,7 +1352,7 @@ function MatchesPanel() {
   const [editingScore, setEditingScore] = useState<any | null>(null);
 
   async function load() {
-    const { data } = await (supabase as any).from("matches").select("*, public_id, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).neq("match_kind", "future").order("start_time", { ascending: false });
+    const { data } = await (supabase as any).from("matches").select("*, public_id, markets(id,is_open), home_team:teams!home_team_id(name,logo_url), away_team:teams!away_team_id(name,logo_url), home_player:players!home_player_id(name,avatar_url), away_player:players!away_player_id(name,avatar_url)").eq("is_archived", false).or("match_kind.is.null,match_kind.neq.future").order("start_time", { ascending: false }).limit(500);
     setMatches(data ?? []);
   }
   useEffect(() => { load(); }, []);
