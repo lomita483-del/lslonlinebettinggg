@@ -5375,7 +5375,16 @@ function SettingsPanel() {
       const message = err?.message || "Settings update was not permitted. Check the current admin permissions.";
       setError(message);
       toast.error("Could not save settings", { description: message });
-    } else toast.success("Settings saved successfully");
+    } else {
+      try {
+        await logAudit("settings_updated", "app_settings", "1", {
+          changed_fields: settingsColumns.filter((key) => JSON.stringify(patch[key]) !== JSON.stringify(settings[key])),
+        });
+      } catch (auditError) {
+        console.error("Settings audit log failed:", auditError);
+      }
+      toast.success("Settings saved successfully");
+    }
   };
 
   const update = (key: string, value: any) => setSettings((current: any) => ({ ...current, [key]: value }));
