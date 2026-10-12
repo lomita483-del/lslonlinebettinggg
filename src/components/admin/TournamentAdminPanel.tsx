@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { notifyAction } from "@/lib/notify-action";
 import { TournamentBracket, type TMatch, type TParticipant, type Tournament } from "@/components/TournamentBracket";
+import { BracketPreviewDialog } from "@/components/admin/BracketPreviewDialog";
+import { MatchSelectCombo } from "@/components/admin/MatchSelectCombo";
 
 /** Upload a bracket image from device storage to a public bucket and return its URL. */
 async function uploadBracketImage(file: File): Promise<string | null> {
@@ -41,6 +43,7 @@ export function TournamentAdminPanel() {
   const confirm = useConfirm();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
+  const [selectedTournaments, setSelectedTournaments] = useState<Set<string>>(new Set());
   const [participants, setParticipants] = useState<TParticipant[]>([]);
   const [matches, setMatches] = useState<TMatch[]>([]);
   const [futureMatches, setFutureMatches] = useState<any[]>([]);
@@ -54,13 +57,18 @@ export function TournamentAdminPanel() {
   const [pName, setPName] = useState("");
   const [pLogo, setPLogo] = useState("");
   const [pLogoBusy, setPLogoBusy] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(""); // NEW: search state
+  const [searchQuery, setSearchQuery] = useState("");
 
   // result dialog
   const [resultMatch, setResultMatch] = useState<TMatch | null>(null);
   const [sA, setSA] = useState("");
   const [sB, setSB] = useState("");
   const [linkId, setLinkId] = useState("");
+
+  // bracket preview dialog
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [bracketSlots, setBracketSlots] = useState<(string | null)[]>([]);
+  const [slotAssignments, setSlotAssignments] = useState<Map<number, string | null>>(new Map());
 
   const sel = useMemo(() => tournaments.find((t) => t.id === selId) ?? null, [tournaments, selId]);
   const partMap = useMemo(() => Object.fromEntries(participants.map((p) => [p.id, p])), [participants]);
@@ -75,9 +83,11 @@ export function TournamentAdminPanel() {
     const { data } = await (supabase as any).from("tournaments").select("*").order("created_at", { ascending: false });
     setTournaments(data ?? []);
     if (!selId && data?.length) setSelId(data[0].id);
+    setSelectedTournaments(new Set());
     const { data: fm } = await (supabase as any).from("matches").select("id,name").eq("match_kind", "future").eq("is_archived", false).order("created_at", { ascending: false });
     setFutureMatches(fm ?? []);
-    const { data: lm } = await (supabase as any).from("matches").select("id,name,home_score,away_score,status").eq("is_archived", false).eq("is_virtual", false).order("start_time", { ascending: false }).limit(300);
+    // Load ALL matches (no limit)
+    const { data: lm } = await (supabase as any).from("matches").select("id,name,home_score,away_score,status").eq("is_archived", false).eq("is_virtual", false).order("start_time", { ascending: false });
     setLinkableMatches(lm ?? []);
     const [{ data: pls }, { data: tms }] = await Promise.all([
       supabase.from("players").select("id,name,avatar_url").order("name"),
@@ -88,6 +98,7 @@ export function TournamentAdminPanel() {
       ...((pls ?? []).map((p: any) => ({ id: `player:${p.id}`, name: p.name, logo_url: p.avatar_url ?? null, kind: "player" as const }))),
     ]);
   }
+
   async function loadDetail(id: string) {
     const [{ data: ps }, { data: ms }] = await Promise.all([
       (supabase as any).from("tournament_participants").select("*").eq("tournament_id", id).order("seed").order("created_at"),
@@ -96,6 +107,7 @@ export function TournamentAdminPanel() {
     setParticipants(ps ?? []);
     setMatches(ms ?? []);
   }
+
   useEffect(() => { loadTournaments(); }, []);
   useEffect(() => { if (selId) loadDetail(selId); }, [selId]);
 
@@ -121,6 +133,7 @@ export function TournamentAdminPanel() {
     setPName(""); setPLogo("");
     loadDetail(sel.id);
   }
+
   async function removeParticipant(id: string) {
     if (!sel) return;
     await (supabase as any).from("tournament_participants").delete().eq("id", id);
@@ -137,23 +150,14 @@ export function TournamentAdminPanel() {
     await Promise.all(arr.map((p, i) => (supabase as any).from("tournament_participants").update({ seed: i + 1 }).eq("id", p.id)));
   }
 
-  async function generateBracket() {
-    if (!sel) return;
+  // Generate bracket preview (shows slots without saving)
+  function generateBracketPreview() {
     if (participants.length < 2) { toast.error("Add at least 2 participants"); return; }
-    const ok = await confirm({
-      title: "Generate the knockout bracket?",
-      description: `This builds a single-elimination bracket for ${participants.length} participant${participants.length === 1 ? "" : "s"}. Any existing bracket matches for this tournament will be replaced.`,
-      confirmText: "Generate bracket",
-    });
-    if (!ok) return;
-
-    await (supabase as any).from("tournament_matches").delete().eq("tournament_id", sel.id);
-
+    
     let size = 2;
     while (size < participants.length) size *= 2;
     const totalRounds = Math.log2(size);
 
-    // standard single-elimination seeding order (1, size, …) so byes spread evenly
     let seedPos: number[] = [1, 2];
     for (let r = 1; r < totalRounds; r++) {
       const sum = seedPos.length * 2 + 1;
@@ -161,12 +165,58 @@ export function TournamentAdminPanel() {
       for (const p of seedPos) { next.push(p); next.push(sum - p); }
       seedPos = next;
     }
-    // map each bracket slot to a participant id (or null = bye) using the manual order as seeding
-    const slotIds: (string | null)[] = seedPos.map((seed) => participants[seed - 1]?.id ?? null);
 
-    // build from final round down so we know next_match ids
+    const slots = seedPos.map((seed) => participants[seed - 1]?.id ?? null);
+    setBracketSlots(slots);
+    setSlotAssignments(new Map(slots.map((id, idx) => [idx, id])));
+    setPreviewOpen(true);
+  }
+
+  // Assign participant to a specific bracket slot
+  function assignParticipantToSlot(slotIndex: number, participantId: string | null) {
+    const newAssignments = new Map(slotAssignments);
+    newAssignments.set(slotIndex, participantId);
+    setSlotAssignments(newAssignments);
+  }
+
+  // Swap two slot assignments (used by the "swap this matchup" button in preview)
+  function swapSlots(a: number, b: number) {
+    const n = new Map(slotAssignments);
+    const va = n.get(a) ?? null;
+    const vb = n.get(b) ?? null;
+    n.set(a, vb);
+    n.set(b, va);
+    setSlotAssignments(n);
+  }
+
+  // Auto-seed: re-apply the default 1-vs-N seeding from the current participant order
+  function autoSeed() {
+    const size = bracketSlots.length;
+    let seedPos: number[] = [1, 2];
+    const totalRounds = Math.log2(size);
+    for (let r = 1; r < totalRounds; r++) {
+      const sum = seedPos.length * 2 + 1;
+      const next: number[] = [];
+      for (const p of seedPos) { next.push(p); next.push(sum - p); }
+      seedPos = next;
+    }
+    const fresh = seedPos.map((seed) => participants[seed - 1]?.id ?? null);
+    setSlotAssignments(new Map(fresh.map((id, idx) => [idx, id])));
+  }
+
+  // Create bracket with custom assignments
+  async function generateBracketFromPreview() {
+    if (!sel) return;
+
+    const customSlotIds = Array.from({ length: bracketSlots.length }, (_, i) => slotAssignments.get(i) ?? null);
+
+    await (supabase as any).from("tournament_matches").delete().eq("tournament_id", sel.id);
+
+    let size = 2;
+    while (size < bracketSlots.length) size *= 2;
+    const totalRounds = Math.log2(size);
+
     let aboveIds: string[] = [];
-    let round1Rows: any[] = [];
     for (let r = totalRounds; r >= 1; r--) {
       const matchesInRound = size / Math.pow(2, r);
       const rows = Array.from({ length: matchesInRound }, (_, j) => {
@@ -178,34 +228,19 @@ export function TournamentAdminPanel() {
           next_match_id, next_slot, status: "pending",
         };
         if (r === 1) {
-          row.participant_a_id = slotIds[2 * j] ?? null;
-          row.participant_b_id = slotIds[2 * j + 1] ?? null;
+          row.participant_a_id = customSlotIds[2 * j] ?? null;
+          row.participant_b_id = customSlotIds[2 * j + 1] ?? null;
         }
         return row;
       });
-      const { data, error } = await (supabase as any).from("tournament_matches").insert(rows).select("id,slot,next_match_id,next_slot,participant_a_id,participant_b_id");
+      const { data, error } = await (supabase as any).from("tournament_matches").insert(rows).select("id,slot,next_match_id,next_slot");
       if (error) { toast.error(error.message); return; }
       const sorted = (data ?? []).sort((a: any, b: any) => a.slot - b.slot);
       aboveIds = sorted.map((d: any) => d.id);
-      if (r === 1) round1Rows = sorted;
     }
 
-    // auto-advance byes: any first-round match with exactly one participant is won by default,
-    // so we never render empty/incomplete bracket slots.
-    for (const m of round1Rows) {
-      const a = m.participant_a_id, b = m.participant_b_id;
-      const hasA = !!a, hasB = !!b;
-      if (hasA !== hasB) {
-        const winner = a || b;
-        await (supabase as any).from("tournament_matches").update({ winner_id: winner, status: "completed" }).eq("id", m.id);
-        if (m.next_match_id) {
-          const col = m.next_slot === "b" ? "participant_b_id" : "participant_a_id";
-          await (supabase as any).from("tournament_matches").update({ [col]: winner }).eq("id", m.next_match_id);
-        }
-        await (supabase as any).from("tournament_participants").update({ current_round: 2 }).eq("id", winner);
-      }
-    }
-    toast.success("Bracket generated");
+    toast.success("Bracket generated with custom assignments!");
+    setPreviewOpen(false);
     loadDetail(sel.id);
   }
 
@@ -233,8 +268,6 @@ export function TournamentAdminPanel() {
     setLinkId((m as any).match_id ?? "");
   }
 
-  // Link / unlink a real match to this bracket slot. Once linked, the DB trigger
-  // keeps score_a/score_b in sync with the live match's score automatically.
   async function linkLiveMatch(matchId: string) {
     if (!resultMatch) return;
     setLinkId(matchId);
@@ -243,7 +276,6 @@ export function TournamentAdminPanel() {
     if (matchId) {
       const lm = linkableMatches.find((x) => x.id === matchId);
       if (lm) {
-        // pull current scores immediately so the admin can review them
         await (supabase as any).from("tournament_matches").update({ score_a: lm.home_score ?? 0, score_b: lm.away_score ?? 0 }).eq("id", resultMatch.id);
         setSA(String(lm.home_score ?? 0));
         setSB(String(lm.away_score ?? 0));
@@ -287,19 +319,40 @@ export function TournamentAdminPanel() {
       <div className="grid lg:grid-cols-[380px_1fr] gap-4">
         <Card className="glass-strong p-4 space-y-3">
           <div className="font-bold flex items-center gap-2"><Trophy className="h-4 w-4 text-primary" />Create Tournament</div>
-          <div className="space-y-1"><Label className="text-xs text-muted-foreground">Tournament name (words, e.g. "Lomita Shooters League")</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Shotgun Showdown" /></div>
-          <div className="space-y-1"><Label className="text-xs text-muted-foreground">Tagline (short slogan)</Label><Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="e.g. ONE LEAGUE. NO MERCY. RESPECT THE GAME." /></div>
+          <div className="space-y-1"><Label className="text-xs text-muted-foreground">Tournament name (words, e.g. "Lomita Shooters League")</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Sunday Night Shootout" /></div>
+          <div className="space-y-1"><Label className="text-xs text-muted-foreground">Tagline (short slogan)</Label><Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="ONE LEAGUE. NO MERCY. RESPECT THE GAME." /></div>
           <div className="space-y-1"><Label className="text-xs text-muted-foreground">Event date (calendar)</Label><Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} /></div>
           <Button className="btn-luxury w-full" onClick={createTournament}><Plus className="h-4 w-4 mr-1" />Create Tournament</Button>
 
           {tournaments.length > 0 && (
             <div className="pt-2 space-y-1">
-              <Label className="text-xs text-muted-foreground">Select tournament to manage</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs text-muted-foreground">Select tournament to manage</Label>
+                {selectedTournaments.size > 0 && (
+                  <Button size="sm" variant="destructive" className="h-6 text-[10px]" onClick={async () => {
+                    const n = selectedTournaments.size;
+                    if (!window.confirm(`Delete ${n} tournament${n === 1 ? "" : "s"}? Their brackets, participants and results will be permanently removed.`)) return;
+                    const ids = Array.from(selectedTournaments);
+                    await (supabase as any).from("tournament_matches").delete().in("tournament_id", ids);
+                    await (supabase as any).from("tournament_participants").delete().in("tournament_id", ids);
+                    const { error } = await (supabase as any).from("tournaments").delete().in("id", ids);
+                    if (error) { toast.error(error.message); return; }
+                    toast.success(`Deleted ${n} tournament${n === 1 ? "" : "s"}`);
+                    if (selId && selectedTournaments.has(selId)) setSelId(null);
+                    loadTournaments();
+                  }}>
+                    <Trash2 className="h-3 w-3 mr-1" />Delete ({selectedTournaments.size})
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
                 {tournaments.map((t) => (
-                  <button key={t.id} onClick={() => setSelId(t.id)} className={`text-left rounded-md px-3 py-2 text-sm border ${selId === t.id ? "border-primary bg-primary/10" : "border-border"}`}>
-                    <span className="font-bold">{t.name}</span> <Badge variant="outline" className="ml-1 text-[9px] capitalize">{t.status}</Badge>
-                  </button>
+                  <div key={t.id} className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm border ${selId === t.id ? "border-primary bg-primary/10" : "border-border"}`}>
+                    <input type="checkbox" checked={selectedTournaments.has(t.id)} onChange={() => setSelectedTournaments((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} />
+                    <button onClick={() => setSelId(t.id)} className="text-left flex-1 min-w-0">
+                      <span className="font-bold">{t.name}</span> <Badge variant="outline" className="ml-1 text-[9px] capitalize">{t.status}</Badge>
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -371,9 +424,7 @@ export function TournamentAdminPanel() {
               )}
             </div>
 
-            <p className="text-[11px] text-muted-foreground">The order below is the bracket placement — use the arrows to decide who faces who. Pairs are formed top-to-bottom (1 vs 2, 3 vs 4, …) when you generate the bracket.
-              {searchQuery && ` (showing ${filteredParticipants.length} of ${participants.length})`}
-            </p>
+            <p className="text-[11px] text-muted-foreground">The order below is the bracket placement — use the arrows to decide who faces who. Pairs are formed top-to-bottom (1 vs 2, 3 vs 4, etc).{searchQuery && ` (showing ${filteredParticipants.length} of ${participants.length})`}</p>
             <div className="flex flex-col gap-1.5 max-h-44 overflow-y-auto pr-1">
               {filteredParticipants.length > 0 ? (
                 filteredParticipants.map((p, idx) => {
@@ -398,7 +449,7 @@ export function TournamentAdminPanel() {
               )}
             </div>
             <div className="flex flex-wrap gap-2 items-center pt-1">
-              <Button className="btn-luxury" onClick={generateBracket}><Wand2 className="h-4 w-4 mr-1" />Generate / Rebuild Bracket</Button>
+              <Button className="btn-luxury" onClick={generateBracketPreview}><Wand2 className="h-4 w-4 mr-1" />Preview &amp; Customize Bracket</Button>
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-muted-foreground">Betting market</Label>
                 <select className="bg-background border border-border rounded-md text-sm px-2 py-1.5" value={sel.futures_match_id ?? ""} onChange={(e) => linkFutures(e.target.value)}>
@@ -421,6 +472,19 @@ export function TournamentAdminPanel() {
         </Card>
       )}
 
+      {/* Bracket Preview & Customization Dialog */}
+      <BracketPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        participants={participants}
+        slots={bracketSlots}
+        slotAssignments={slotAssignments}
+        onAssign={assignParticipantToSlot}
+        onSwap={swapSlots}
+        onShuffle={autoSeed}
+        onGenerate={generateBracketFromPreview}
+      />
+
       {/* glass result dialog */}
       <Dialog open={!!resultMatch} onOpenChange={(o) => !o && setResultMatch(null)}>
         <DialogContent className="glass-strong border-primary/30 max-w-md backdrop-blur-2xl shadow-luxury overflow-hidden">
@@ -433,18 +497,11 @@ export function TournamentAdminPanel() {
           {/* link a real/live match — scores then auto-sync from it */}
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Linked live match (scores auto-update from it)</Label>
-            <select
-              className="w-full bg-background border border-border rounded-md text-sm px-2 py-1.5"
+            <MatchSelectCombo
               value={linkId}
-              onChange={(e) => linkLiveMatch(e.target.value)}
-            >
-              <option value="">— not linked —</option>
-              {linkableMatches.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name} · {f.home_score ?? 0}–{f.away_score ?? 0} ({f.status})
-                </option>
-              ))}
-            </select>
+              matches={linkableMatches}
+              onChange={(id) => linkLiveMatch(id)}
+            />
             {linkId && <p className="text-[11px] text-emerald-400">Scores below are pulled from the live match. They auto-update whenever the match score changes.</p>}
           </div>
 
@@ -466,7 +523,7 @@ export function TournamentAdminPanel() {
                 <Button size="sm" className="btn-luxury text-xs" disabled={!rA} onClick={() => submitResult(resultMatch!.participant_a_id, "won")}>Won</Button>
                 <Button size="sm" variant="outline" className="text-xs" disabled={!rA} onClick={() => submitResult(resultMatch!.participant_a_id, "qualified")}>Qualified</Button>
                 <Button size="sm" variant="outline" className="text-xs" disabled={!rB} onClick={() => submitResult(resultMatch!.participant_b_id, "won")}>Lost</Button>
-                <Button size="sm" variant="destructive" className="text-xs" disabled={!rB || !rA} onClick={() => submitResult(resultMatch!.participant_b_id, "won", resultMatch!.participant_a_id)}>DQ</Button>
+                <Button size="sm" variant="destructive" className="text-xs" disabled={!rB || !rA} onClick={() => submitResult(resultMatch!.participant_b_id, "won", resultMatch!.participant_a_id)}>Disqualify</Button>
               </div>
             </div>
             {/* Participant B outcomes */}
@@ -476,7 +533,7 @@ export function TournamentAdminPanel() {
                 <Button size="sm" className="btn-luxury text-xs" disabled={!rB} onClick={() => submitResult(resultMatch!.participant_b_id, "won")}>Won</Button>
                 <Button size="sm" variant="outline" className="text-xs" disabled={!rB} onClick={() => submitResult(resultMatch!.participant_b_id, "qualified")}>Qualified</Button>
                 <Button size="sm" variant="outline" className="text-xs" disabled={!rA} onClick={() => submitResult(resultMatch!.participant_a_id, "won")}>Lost</Button>
-                <Button size="sm" variant="destructive" className="text-xs" disabled={!rA || !rB} onClick={() => submitResult(resultMatch!.participant_a_id, "won", resultMatch!.participant_b_id)}>DQ</Button>
+                <Button size="sm" variant="destructive" className="text-xs" disabled={!rA || !rB} onClick={() => submitResult(resultMatch!.participant_a_id, "won", resultMatch!.participant_b_id)}>Disqualify</Button>
               </div>
             </div>
             <Button variant="outline" className="w-full" onClick={() => submitResult(null)}>Save scores only (no winner yet)</Button>
