@@ -5327,7 +5327,7 @@ function SettingsPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const load = async () => {
-    const result = await (supabase as any).from("app_settings").select("maintenance_mode,maintenance_message,contact_email,contact_phone,min_stake,max_payout").eq("id", 1).maybeSingle();
+    const result = await (supabase as any).from("app_settings").select("maintenance_mode,maintenance_message,closed_mode,closed_message,contact_email,contact_phone,contact_whatsapp,hero_tagline,hero_title,hero_subtitle,site_name,min_stake,max_payout").eq("id", 1).maybeSingle();
     if (result.error) setError(result.error.message);
     else { setError(""); setSettings(result.data); }
   };
@@ -5339,14 +5339,15 @@ function SettingsPanel() {
     if (err || !data?.length) toast.error(err?.message || "Settings update was not permitted");
     else toast.success("Settings saved successfully");
   };
-  return <Card className="space-y-4 border-primary/30 p-5">
-    <h2 className="text-xl font-black text-primary">Website Settings</h2>
+  return <Card className="space-y-5 border-primary/40 bg-card/95 p-6 shadow-[0_0_30px_hsl(var(--primary)/0.14)]">
+    <div className="rounded-xl border border-primary/30 bg-gradient-to-r from-primary/20 via-card to-card p-4"><h2 className="text-2xl font-black tracking-wide text-primary">Website Settings</h2><p className="text-sm text-foreground/80">Lomita Shooters · Administration Command Centre</p></div>
     <p className="text-sm text-muted-foreground">Edit live application settings. Changes are saved only when you press Save.</p>
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!settings && !error && <p>Loading settings…</p>}
     {settings && <>
       <label className="flex items-center justify-between gap-3"><span>Maintenance mode</span><Switch checked={!!settings.maintenance_mode} onCheckedChange={value => setSettings((s: any) => ({...s, maintenance_mode: value}))} /></label>
-      {(["maintenance_message","contact_email","contact_phone","min_stake","max_payout"] as const).map(key => <label key={key} className="block space-y-1">
+      <label className="flex items-center justify-between gap-3"><span>Closed mode</span><Switch checked={!!settings.closed_mode} onCheckedChange={value => setSettings((s: any) => ({...s, closed_mode: value}))} /></label>
+      {(["maintenance_message","closed_message","contact_email","contact_phone","contact_whatsapp","site_name","hero_title","hero_subtitle","hero_tagline","min_stake","max_payout"] as const).map(key => <label key={key} className="block space-y-1">
         <span className="text-sm font-semibold">{key.replace(/_/g," ").toUpperCase()}</span>
         <Input type={key === "min_stake" || key === "max_payout" ? "number" : "text"} value={settings[key] ?? ""} onChange={event => setSettings((s: any) => ({...s, [key]: key === "min_stake" || key === "max_payout" ? Number(event.target.value) : event.target.value}))} />
       </label>)}
