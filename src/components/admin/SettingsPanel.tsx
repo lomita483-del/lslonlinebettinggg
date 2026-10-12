@@ -19,6 +19,7 @@ const DEFAULTS: Settings = {
   closed_message: "The website is currently closed. Please check back later.",
   closed_image: null,
   allow_signups: true,
+  private_mode: false,
   signup_disabled_message: "We're not accepting new members at the moment, check back later or contact support",
   tutorials_enabled: true,
   tutorials_for_new_users: true,
@@ -94,7 +95,7 @@ export function SettingsPanel() {
     const keys = [
       "maintenance_mode", "maintenance_message", "maintenance_image",
       "closed_mode", "closed_message", "closed_image",
-      "allow_signups", "signup_disabled_message",
+      "allow_signups", "signup_disabled_message", "private_mode",
       "tutorials_enabled", "tutorials_for_new_users", "tutorials_for_new_signins", "tutorials_for_visitors",
       "min_stake", "max_payout", "allow_rebet",
       "hero_tagline", "hero_subtitle", "hero_title", "about_us", "why_trust_us", "terms_content",
@@ -138,6 +139,10 @@ export function SettingsPanel() {
       <ToggleRow label="Close website to non-admin visitors" checked={!!settings.closed_mode} onChange={(v) => set("closed_mode", v)} />
       <Textarea value={settings.closed_message ?? ""} onChange={(e) => set("closed_message", e.target.value)} placeholder="Website closed notice" />
       <ImageSettingControl label="Website closed screen image" value={settings.closed_image} onChange={(v) => set("closed_image", v)} aspect="16 / 9" />
+    </Section>
+
+    <Section title="Private access" description="Require the existing private-site access rules for ordinary visitors; administrators retain their current access." icon={ShieldAlert}>
+      <ToggleRow label="Enable private access mode" help="Uses the platform’s existing private-mode gate; this does not create a new allowlist or change role permissions." checked={!!settings.private_mode} onChange={(v) => set("private_mode", v)} />
     </Section>
 
     <Section title="Registration and tutorials" description="Controls signup availability and the guided-tour audience." icon={UserPlus}>
