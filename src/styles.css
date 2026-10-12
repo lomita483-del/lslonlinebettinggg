@@ -1318,11 +1318,3 @@ html.light body {
   scroll-padding-top: 0;
 }
 
-/* Scale the complete LSL site layout on phone-sized viewports, including the
-   header and page content. Compensate width so the zoomed layout fills screen. */
-@media (max-width: 640px) {
-  .lsl-mobile-layout-scale {
-    zoom: 0.85;
-    width: 117.6470588%;
-  }
-}
