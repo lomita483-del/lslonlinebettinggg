@@ -107,15 +107,23 @@ export function SettingsPanel() {
     ];
     const patch: Settings = {};
     for (const key of keys) if (key in settings) patch[key] = settings[key];
-    let { error } = await (supabase as any).from("app_settings").update(patch).eq("id", 1);
-    // Some deployed databases have not yet applied the contact_discord migration.
-    // Retry the rest of the settings so one missing optional column cannot block every setting.
-    let skippedDiscord = false;
-    if (error && /contact_discord/i.test(error.message) && /column|schema cache|does not exist/i.test(error.message)) {
-      const { contact_discord: _unsupportedDiscord, ...compatiblePatch } = patch;
-      const retry = await (supabase as any).from("app_settings").update(compatiblePatch).eq("id", 1);
-      error = retry.error;
-      skippedDiscord = !error;
+    let compatiblePatch: Record<string, unknown> = { ...patch };
+    const skippedFields: string[] = [];
+    let error: { message: string } | null = null;
+    // Deployments may be missing newer optional columns until their SQL migrations
+    // have been applied and the PostgREST schema cache has refreshed. Retry only for
+    // those known missing-column errors; never silently ignore unrelated save errors.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await (supabase as any).from("app_settings").update(compatiblePatch).eq("id", 1);
+      error = result.error;
+      if (!error) break;
+      const missingOptionalField = ["signup_disabled_message", "contact_discord"].find(
+        (field) => error && error.message.toLowerCase().includes(field) &&
+          /column|schema cache|does not exist/i.test(error.message)
+      );
+      if (!missingOptionalField) break;
+      delete compatiblePatch[missingOptionalField];
+      skippedFields.push(missingOptionalField);
     }
     if (error) {
       setBusy(false);
@@ -127,7 +135,11 @@ export function SettingsPanel() {
     } catch { /* Audit RPC may not exist in every deployment; settings save remains authoritative. */ }
     setBusy(false);
     setDirty(false);
-    toast.success(skippedDiscord ? "Settings saved, but Discord contact could not be saved because the database migration is pending." : "Settings saved");
+    toast.success(
+      skippedFields.length
+        ? `Other settings saved. Apply the database migration to enable: ${skippedFields.join(", ")}.`
+        : "Settings saved"
+    );
   }
 
   if (!settings) return <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">Loading admin settings…</div>;
