@@ -40,6 +40,7 @@ export function VideoAdsAdminPanel() {
 
   async function uploadVideo(i: number, file: File) {
     if (!file.type.startsWith("video/")) { toast.error("Please choose a video file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Videos must be 5 MB or smaller."); return; }
     setUploadingIdx(i);
     try {
       const path = `video-ad-${crypto.randomUUID()}.${file.name.split(".").pop()}`;
