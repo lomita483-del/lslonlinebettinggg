@@ -198,6 +198,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const [_bgFit, setBgFit] = useState<string>("cover");
   const [_bgPos, setBgPos] = useState<string>("center");
   const [siteName, setSiteName] = useState<string | null>(null);
+  const [privateMode, setPrivateMode] = useState(false);
   const [navBg, setNavBg] = useState<string | null>(null);
   const [navBgFit, setNavBgFit] = useState<string>("cover");
   const [navBgPos, setNavBgPos] = useState<string>("center");
@@ -207,13 +208,14 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       setBgFit(d?.site_bg_fit ?? "cover");
       setBgPos(d?.site_bg_position ?? "center");
       setSiteName(d?.site_name ?? null);
+      setPrivateMode(!!d?.private_mode);
       setNavBg(d?.nav_bg_url ?? null);
       setNavBgFit(d?.nav_bg_fit ?? "cover");
       setNavBgPos(d?.nav_bg_position ?? "center");
     };
     supabase
       .from("app_settings")
-      .select("site_bg_url,site_bg_fit,site_bg_position,site_name,nav_bg_url,nav_bg_fit,nav_bg_position")
+      .select("site_bg_url,site_bg_fit,site_bg_position,site_name,nav_bg_url,nav_bg_fit,nav_bg_position,private_mode")
       .eq("id", 1)
       .maybeSingle()
       .then(({ data }) => apply(data));
@@ -225,6 +227,23 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(ch);
     };
   }, []);
+
+  const publicAuthPath = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);
+  if (privateMode && !user && !publicAuthPath) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-background px-4 py-10">
+        <div className="w-full max-w-md rounded-2xl border border-primary/30 bg-card p-6 text-center shadow-2xl space-y-4">
+          {branding.logoUrl ? <img src={branding.logoUrl} alt={branding.name || "League"} className="mx-auto h-16 w-16 object-contain" /> : <GangLogo size={64} className="mx-auto" />}
+          <h1 className="text-2xl font-black gradient-gold-text">Private Website</h1>
+          <p className="text-sm text-muted-foreground">This website is currently available to signed-in members only. Sign in or create an account to continue.</p>
+          <div className="flex justify-center gap-3">
+            <Link to="/login"><Button className="btn-luxury">Sign in</Button></Link>
+            <Link to="/register"><Button variant="outline">Create account</Button></Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="lsl-mobile-layout-scale relative min-h-screen">
