@@ -1344,7 +1344,7 @@ function MatchesPanel() {
   const [matches, setMatches] = useState<any[]>([]);
   const [wizard, setWizard] = useState(false);
   const [shooterWizard, setShooterWizard] = useState(false);
-  const [tab, setTab] = useState<"live" | "scheduled" | "ended">("live");
+  const [tab, setTab] = useState<"live" | "scheduled" | "ended">("scheduled");
   const [query, setQuery] = useState("");
   const [datePreset, setDatePreset] = useState<"any" | "today" | "yesterday" | "custom">("any");
   const [dateBasis, setDateBasis] = useState<"created" | "ended">("ended");
