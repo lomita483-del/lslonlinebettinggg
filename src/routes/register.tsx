@@ -41,13 +41,15 @@ function RegisterPage() {
   });
   const [accepted, setAccepted] = useState(false);
   const [signupsAllowed, setSignupsAllowed] = useState<boolean | null>(null);
+  const [signupNotice, setSignupNotice] = useState("We are not accepting new members at the moment, check back later or contact support");
   useEffect(() => {
     let alive = true;
-    supabase.from("app_settings").select("allow_signups").eq("id", 1).maybeSingle()
-      .then(({ data, error }) => { if (alive) setSignupsAllowed(error ? true : (data as any)?.allow_signups !== false); });
+    supabase.from("app_settings").select("allow_signups,signup_disabled_message").eq("id", 1).maybeSingle()
+      .then(({ data, error }) => { if (alive) { setSignupsAllowed(error ? true : (data as any)?.allow_signups !== false); if ((data as any)?.signup_disabled_message) setSignupNotice((data as any).signup_disabled_message); } });
     const channel = supabase.channel("registration-settings")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.1" }, (payload: any) => {
         setSignupsAllowed(payload.new?.allow_signups !== false);
+        if (payload.new?.signup_disabled_message) setSignupNotice(payload.new.signup_disabled_message);
       }).subscribe();
     return () => { alive = false; void supabase.removeChannel(channel); };
   }, []);
@@ -57,7 +59,7 @@ function RegisterPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signupsAllowed === false) return toast.error("We are not accepting new members at the moment, check back later or contact support");
+    if (signupsAllowed === false) return toast.error(signupNotice);
     if (!accepted) return toast.error("You must accept the terms");
     if (!f.ingame_name.trim()) return toast.error("In-game full name is required");
     if (!f.discord_full_name.trim()) return toast.error("Discord full name is required");
@@ -93,7 +95,7 @@ function RegisterPage() {
 
   if (signupsAllowed === false) return (
     <Layout>
-      <div className="container mx-auto px-4 py-16 max-w-xl"><Card className="p-8 text-center border-primary/30 bg-card/70"><h1 className="text-3xl font-black text-primary mb-3">Registration is closed</h1><p className="text-muted-foreground">We’re not accepting new members at the moment, check back later or contact support.</p><p className="mt-5 text-sm">Already a member? <Link to="/login" className="text-primary hover:underline">Sign in</Link></p></Card></div>
+      <div className="container mx-auto px-4 py-16 max-w-xl"><Card className="p-8 text-center border-primary/30 bg-card/70"><h1 className="text-3xl font-black text-primary mb-3">Registration is closed</h1><p className="text-muted-foreground">{signupNotice}</p><p className="mt-5 text-sm">Already a member? <Link to="/login" className="text-primary hover:underline">Sign in</Link></p></Card></div>
     </Layout>
   );
 
