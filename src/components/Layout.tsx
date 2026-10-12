@@ -287,7 +287,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
                 </div>
               ) : (
                 <>
-                  <div className="text-sm font-extrabold tracking-[0.25em] gradient-gold-text">EFOOTBALL</div>
+                  <div className="text-sm font-extrabold tracking-[0.25em] gradient-gold-text">SHOOTERS LEAGUE</div>
                   <div className="text-[9px] text-muted-foreground tracking-[0.35em]">COMPETITION BETTING</div>
                 </>
               )}
@@ -497,7 +497,7 @@ function SiteFooter({ isHome = false }: { isHome?: boolean }) {
           <div className="flex items-center gap-2 mb-2">
             <GangLogo size={28} withGlow={false} />
             <span className="font-bold tracking-widest gradient-gold-text uppercase">
-              {s?.site_name || "E-FOOTBALL COMPETITION BET"}
+              {s?.site_name || "LOMITA SHOOTERS LEAGUE"}
             </span>
           </div>
           <p className="text-muted-foreground text-xs">Virtual token-only platform · No real money gambling.</p>

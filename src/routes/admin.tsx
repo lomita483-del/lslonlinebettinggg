@@ -48,8 +48,7 @@ import {
   Swords,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import _ecbLogo from "@/assets/lsl-logo.png";
-const lslLogo = _ecbLogo.url;
+import lslLogo from "@/assets/lsl-logo.png";
 import tileBattle from "@/assets/tile-battle.jpg";
 import tileVirtual from "@/assets/tile-virtual.jpg";
 import tileChallenges from "@/assets/tile-challenges.jpg";
@@ -4059,7 +4058,7 @@ function AndroidAppUpdatesPanel() {
     enabled: false,
     latest_version: "1.0.63",
     latest_build: 64,
-    download_url: "https://raw.githubusercontent.com/lomita483-del/efootballcompetitionbetting/main/public/downloads/efootball-competition-bet-latest.apk",
+    download_url: "https://github.com/lomita483-del/lslonlinebettinggg/releases/latest",
     whats_new: [
       "The app footer now displays the current release version and reads the live release metadata so the version stays synchronized with the latest app release.",
       "The Android package version/build was incremented for this release.",
