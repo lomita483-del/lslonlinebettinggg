@@ -5339,9 +5339,9 @@ function SettingsPanel() {
     if (err || !data?.length) toast.error(err?.message || "Settings update was not permitted");
     else toast.success("Settings saved successfully");
   };
-  return <Card className="space-y-5 border-primary/40 bg-card/95 p-6 shadow-[0_0_30px_hsl(var(--primary)/0.14)]">
-    <div className="rounded-xl border border-primary/30 bg-gradient-to-r from-primary/20 via-card to-card p-4"><h2 className="text-2xl font-black tracking-wide text-primary">Website Settings</h2><p className="text-sm text-foreground/80">Lomita Shooters · Administration Command Centre</p></div>
-    <p className="text-sm text-muted-foreground">Edit live application settings. Changes are saved only when you press Save.</p>
+  return <Card className="admin-panel space-y-5 border-primary/40 bg-card/95 p-6 shadow-[0_0_30px_hsl(var(--primary)/0.14)]">
+    <div className="admin-command-header rounded-xl border border-primary/30 bg-gradient-to-r from-primary/20 via-card to-card p-4"><h2 className="admin-command-name text-2xl font-black tracking-wide text-primary">Website Settings</h2><p className="text-sm text-foreground/80">Lomita Shooters · Administration Command Centre</p></div>
+    <p className="admin-panel-subtitle text-sm text-muted-foreground">Edit live application settings. Changes are saved only when you press Save.</p>
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!settings && !error && <p>Loading settings…</p>}
     {settings && <>
@@ -5351,7 +5351,7 @@ function SettingsPanel() {
         <span className="text-sm font-semibold">{key.replace(/_/g," ").toUpperCase()}</span>
         <Input type={key === "min_stake" || key === "max_payout" ? "number" : "text"} value={settings[key] ?? ""} onChange={event => setSettings((s: any) => ({...s, [key]: key === "min_stake" || key === "max_payout" ? Number(event.target.value) : event.target.value}))} />
       </label>)}
-      <div className="flex gap-2"><Button onClick={() => void save()} disabled={busy}>{busy ? "Saving…" : "Save Settings"}</Button><Button variant="outline" onClick={() => void load()} disabled={busy}>Reload</Button></div>
+      <div className="flex flex-wrap gap-2"><Button className="admin-cmd-btn" onClick={() => void save()} disabled={busy}>{busy ? "Saving…" : "Save Settings"}</Button><Button className="admin-cmd-btn" variant="outline" onClick={() => void load()} disabled={busy}>Reload</Button></div>
     </>}
   </Card>;
 }
