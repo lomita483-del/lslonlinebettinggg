@@ -5441,7 +5441,7 @@ function SettingsPanel() {
     </section>
   );
 
-  return <Card className="admin-panel space-y-5 border-primary/40 bg-card/95 p-4 shadow-[0_0_30px_hsl(var(--primary)/0.14)] md:p-6">
+  return <Card className="admin-panel min-h-0 max-h-[calc(100dvh-8rem)] overflow-y-auto overscroll-y-contain space-y-5 border-primary/40 bg-card/95 p-4 shadow-[0_0_30px_hsl(var(--primary)/0.14)] md:p-6">
     <div className="admin-command-header rounded-xl border border-primary/30 bg-gradient-to-r from-primary/20 via-card to-card p-4">
       <h2 className="admin-command-name text-2xl font-black tracking-wide text-primary">Website Settings</h2>
       <p className="text-sm text-foreground/80">Lomita Shooters League · Administration Command Centre</p>
