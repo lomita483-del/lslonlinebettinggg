@@ -27,13 +27,16 @@ const DEFAULTS: Settings = {
   min_stake: 1,
   max_payout: 1000000000,
   allow_rebet: true,
-  platform_tagline: "",
+  hero_tagline: "Season 4 · Live",
   hero_subtitle: "",
   hero_title: "",
   contact_email: "",
   contact_phone: "",
   contact_whatsapp: "",
   contact_discord: "",
+  about_us: "",
+  why_trust_us: "",
+  terms_content: "",
   site_bg_url: null,
   site_bg_fit: "cover",
   site_bg_position: "center",
@@ -94,7 +97,7 @@ export function SettingsPanel() {
       "allow_signups", "signup_disabled_message",
       "tutorials_enabled", "tutorials_for_new_users", "tutorials_for_new_signins", "tutorials_for_visitors",
       "min_stake", "max_payout", "allow_rebet",
-      "platform_tagline", "hero_subtitle", "hero_title",
+      "hero_tagline", "hero_subtitle", "hero_title", "about_us", "why_trust_us", "terms_content",
       "contact_email", "contact_phone", "contact_whatsapp", "contact_discord",
       "site_bg_url", "site_bg_fit", "site_bg_position",
       "nav_bg_url", "nav_bg_fit", "nav_bg_position",
@@ -156,7 +159,7 @@ export function SettingsPanel() {
 
     <Section title="Homepage copy and contact" description="Editable public-facing copy and support contact details." icon={MessageCircle}>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1 text-xs text-muted-foreground">Hero tagline<Input value={settings.platform_tagline ?? ""} onChange={(e) => set("platform_tagline", e.target.value)} /></label>
+        <label className="space-y-1 text-xs text-muted-foreground">Hero tagline<Input value={settings.hero_tagline ?? ""} onChange={(e) => set("hero_tagline", e.target.value)} /></label>
         <label className="space-y-1 text-xs text-muted-foreground">Home headline<Input value={settings.hero_title ?? ""} onChange={(e) => set("hero_title", e.target.value)} /></label>
         <label className="space-y-1 text-xs text-muted-foreground">Contact email<Input value={settings.contact_email ?? ""} onChange={(e) => set("contact_email", e.target.value)} /></label>
         <label className="space-y-1 text-xs text-muted-foreground">Contact phone<Input value={settings.contact_phone ?? ""} onChange={(e) => set("contact_phone", e.target.value)} /></label>
@@ -164,6 +167,9 @@ export function SettingsPanel() {
         <label className="space-y-1 text-xs text-muted-foreground">Discord support URL<Input value={settings.contact_discord ?? ""} onChange={(e) => set("contact_discord", e.target.value)} /></label>
       </div>
       <label className="block space-y-1 text-xs text-muted-foreground">Home sub-text<Textarea value={settings.hero_subtitle ?? ""} onChange={(e) => set("hero_subtitle", e.target.value)} /></label>
+      <label className="block space-y-1 text-xs text-muted-foreground">About us<Textarea value={settings.about_us ?? ""} onChange={(e) => set("about_us", e.target.value)} /></label>
+      <label className="block space-y-1 text-xs text-muted-foreground">Why trust us<Textarea value={settings.why_trust_us ?? ""} onChange={(e) => set("why_trust_us", e.target.value)} /></label>
+      <label className="block space-y-1 text-xs text-muted-foreground">Terms &amp; Conditions<Textarea value={settings.terms_content ?? ""} onChange={(e) => set("terms_content", e.target.value)} /></label>
     </Section>
 
     <Section title="Backgrounds and appearance" description="Upload, paste a public image URL, preview, crop/fit, position, or remove each background." icon={ImageIcon}>
