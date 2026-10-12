@@ -136,7 +136,7 @@ export function ImageSettingControl({
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.gif,.webp,.apng"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
