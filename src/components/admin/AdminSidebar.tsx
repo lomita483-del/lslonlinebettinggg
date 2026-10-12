@@ -17,8 +17,7 @@ import {
   Settings as SettingsIcon, Ticket, Coins, Dice5, Shield, Flame, Target,
   Gift, Palette, Disc3, Smartphone,
 } from "lucide-react";
-import _ecbLogo from "@/assets/ecb-logo.png.asset.json";
-const lslLogo = _ecbLogo.url;
+import lslLogo from "@/assets/lsl-logo.png";
 
 export type AdminNavItem = {
   key: string;

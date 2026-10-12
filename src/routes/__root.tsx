@@ -157,16 +157,14 @@ import { MaintenanceGate } from "@/components/MaintenanceGate";
 import { BanGate } from "@/components/BanGate";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { PopupAd } from "@/components/PopupAd";
+import { CookieConsent } from "@/components/CookieConsent";
+import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { BetSlipFab } from "@/components/BetSlip";
 import { RouteProgress } from "@/components/RouteProgress";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  // Service workers / push disabled in this build — unregister any lingering ones.
-  if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -179,6 +177,9 @@ function RootComponent() {
             <PopupAd />
             <BetSlipFab />
             <RouteProgress />
+            <CookieConsent />
+            <PushPermissionPrompt />
+            <PWAInstallPrompt />
             <Toaster />
           </ConfirmProvider>
         </BetSlipProvider>
