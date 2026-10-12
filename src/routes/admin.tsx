@@ -3923,30 +3923,30 @@ function QuickActionsBar({ onOpen, actions: actionsProp }: { onOpen: (t: string)
         </button>
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[min(96vw,520px)] max-w-none max-h-[92dvh] overflow-hidden rounded-[2rem] border-4 border-slate-800 bg-gradient-to-b from-indigo-950 via-violet-900 to-orange-600 p-0 text-white shadow-2xl [&>button]:hidden">
-          <div className="flex items-center justify-between gap-2 border-b border-white/20 px-5 py-4">
+        <DialogContent className="w-[min(94vw,420px)] max-w-none h-[min(66dvh,530px)] max-h-[530px] flex flex-col overflow-hidden rounded-[2.5rem] border-[7px] border-slate-800 bg-gradient-to-b from-indigo-950 via-violet-900 to-orange-600 p-0 text-white shadow-2xl [&>button]:hidden">
+          <div className="flex items-center justify-between gap-2 border-b border-white/20 px-4 py-3">
             <div>
-              <DialogTitle className="text-lg font-black text-white">Quick Action</DialogTitle>
+              <DialogTitle className="text-base font-black text-white">Quick Action</DialogTitle>
               <p className="text-xs text-white/75">Admin command center · {actions.length} tools</p>
             </div>
             <button type="button" onClick={() => setOpen(false)} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900">✕ Close</button>
           </div>
-          <div className="px-5 pt-3">
+          <div className="shrink-0 px-4 pt-2">
             <Input value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Search admin tools…" aria-label="Search quick actions"
               className="border-white/30 bg-black/25 text-white placeholder:text-white/60" />
           </div>
-          <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-7 pt-4" style={{ maxHeight: "calc(92dvh - 145px)" }}>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y px-4 pb-5 pt-3">
             {filtered.length === 0 ? <p className="py-8 text-center text-sm text-white/80">No matching actions.</p> :
-            <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4">
+            <div className="grid grid-cols-4 gap-x-2 gap-y-4">
               {filtered.map((action, index) => {
                 const colors = ["from-pink-500 to-rose-600", "from-indigo-400 to-blue-700", "from-emerald-400 to-green-700", "from-amber-400 to-orange-600", "from-violet-400 to-purple-700", "from-cyan-400 to-sky-700"];
                 return <button key={action.t} type="button" onClick={() => choose(action.t)}
                   className="group flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
-                  <span className={`grid aspect-square w-full max-w-[76px] place-items-center rounded-[20px] bg-gradient-to-br ${colors[index % colors.length]} shadow-lg ring-1 ring-white/20 transition group-active:scale-95`}>
-                    <action.i className="h-8 w-8 text-white drop-shadow-md" />
+                  <span className={`grid aspect-square w-full max-w-[64px] place-items-center rounded-[16px] bg-gradient-to-br ${colors[index % colors.length]} shadow-lg ring-1 ring-white/20 transition group-active:scale-95`}>
+                    <action.i className="h-7 w-7 text-white drop-shadow-md" />
                   </span>
-                  <span className="min-h-[2em] text-[11px] font-medium leading-tight text-white">{action.l}</span>
+                  <span className="min-h-[2em] text-[10px] font-medium leading-tight text-white">{action.l}</span>
                 </button>;
               })}
             </div>}
