@@ -23,6 +23,8 @@ import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PollsRouteImport } from './routes/polls'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -43,12 +45,12 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as QuestsRouteImport } from './routes/quests'
-import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as WagersIndexRouteImport } from './routes/wagers.index'
-import { Route as WagersIdRouteImport } from './routes/wagers.$id'
 import { Route as TournamentsIndexRouteImport } from './routes/tournaments.index'
+import { Route as WagersIdRouteImport } from './routes/wagers.$id'
+import { Route as VirtualInstantShootersRouteImport } from './routes/virtual.instant-shooters'
 import { Route as VirtualHistoryRouteImport } from './routes/virtual.history'
+import { Route as VirtualChampionshipShooterRouteImport } from './routes/virtual.championship-shooter'
 import { Route as TournamentsIdRouteImport } from './routes/tournaments.$id'
 import { Route as TicketIdRouteImport } from './routes/ticket.$id'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches.$matchId'
@@ -125,6 +127,16 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuestsRoute = QuestsRouteImport.update({
+  id: '/quests',
+  path: '/quests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -227,24 +239,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QuestsRoute = QuestsRouteImport.update({
-  id: '/quests',
-  path: '/quests',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReferralsRoute = ReferralsRouteImport.update({
-  id: '/referrals',
-  path: '/referrals',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const WagersIndexRoute = WagersIndexRouteImport.update({
   id: '/wagers/',
   path: '/wagers/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WagersIdRoute = WagersIdRouteImport.update({
-  id: '/wagers/$id',
-  path: '/wagers/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TournamentsIndexRoute = TournamentsIndexRouteImport.update({
@@ -252,11 +249,27 @@ const TournamentsIndexRoute = TournamentsIndexRouteImport.update({
   path: '/tournaments/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WagersIdRoute = WagersIdRouteImport.update({
+  id: '/wagers/$id',
+  path: '/wagers/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VirtualInstantShootersRoute = VirtualInstantShootersRouteImport.update({
+  id: '/instant-shooters',
+  path: '/instant-shooters',
+  getParentRoute: () => VirtualRoute,
+} as any)
 const VirtualHistoryRoute = VirtualHistoryRouteImport.update({
   id: '/history',
   path: '/history',
   getParentRoute: () => VirtualRoute,
 } as any)
+const VirtualChampionshipShooterRoute =
+  VirtualChampionshipShooterRouteImport.update({
+    id: '/championship-shooter',
+    path: '/championship-shooter',
+    getParentRoute: () => VirtualRoute,
+  } as any)
 const TournamentsIdRoute = TournamentsIdRouteImport.update({
   id: '/tournaments/$id',
   path: '/tournaments/$id',
@@ -316,6 +329,8 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/polls': typeof PollsRoute
   '/profile': typeof ProfileRoute
+  '/quests': typeof QuestsRoute
+  '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -333,16 +348,16 @@ export interface FileRoutesByFullPath {
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/ticket/$id': typeof TicketIdRoute
   '/tournaments/$id': typeof TournamentsIdRoute
+  '/virtual/championship-shooter': typeof VirtualChampionshipShooterRoute
   '/virtual/history': typeof VirtualHistoryRoute
+  '/virtual/instant-shooters': typeof VirtualInstantShootersRoute
+  '/wagers/$id': typeof WagersIdRoute
   '/tournaments/': typeof TournamentsIndexRoute
+  '/wagers/': typeof WagersIndexRoute
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
   '/api/public/hooks/broadcast-push': typeof ApiPublicHooksBroadcastPushRoute
   '/api/public/hooks/process-scheduled-push': typeof ApiPublicHooksProcessScheduledPushRoute
   '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
-  '/quests': typeof QuestsRoute
-  '/referrals': typeof ReferralsRoute
-  '/wagers/$id': typeof WagersIdRoute
-  '/wagers/': typeof WagersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -365,6 +380,8 @@ export interface FileRoutesByTo {
   '/notifications': typeof NotificationsRoute
   '/polls': typeof PollsRoute
   '/profile': typeof ProfileRoute
+  '/quests': typeof QuestsRoute
+  '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -382,16 +399,16 @@ export interface FileRoutesByTo {
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/ticket/$id': typeof TicketIdRoute
   '/tournaments/$id': typeof TournamentsIdRoute
+  '/virtual/championship-shooter': typeof VirtualChampionshipShooterRoute
   '/virtual/history': typeof VirtualHistoryRoute
+  '/virtual/instant-shooters': typeof VirtualInstantShootersRoute
+  '/wagers/$id': typeof WagersIdRoute
   '/tournaments': typeof TournamentsIndexRoute
+  '/wagers': typeof WagersIndexRoute
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
   '/api/public/hooks/broadcast-push': typeof ApiPublicHooksBroadcastPushRoute
   '/api/public/hooks/process-scheduled-push': typeof ApiPublicHooksProcessScheduledPushRoute
   '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
-  '/quests': typeof QuestsRoute
-  '/referrals': typeof ReferralsRoute
-  '/wagers/$id': typeof WagersIdRoute
-  '/wagers': typeof WagersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -415,6 +432,8 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/polls': typeof PollsRoute
   '/profile': typeof ProfileRoute
+  '/quests': typeof QuestsRoute
+  '/referrals': typeof ReferralsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
@@ -432,16 +451,16 @@ export interface FileRoutesById {
   '/matches/$matchId': typeof MatchesMatchIdRoute
   '/ticket/$id': typeof TicketIdRoute
   '/tournaments/$id': typeof TournamentsIdRoute
+  '/virtual/championship-shooter': typeof VirtualChampionshipShooterRoute
   '/virtual/history': typeof VirtualHistoryRoute
+  '/virtual/instant-shooters': typeof VirtualInstantShootersRoute
+  '/wagers/$id': typeof WagersIdRoute
   '/tournaments/': typeof TournamentsIndexRoute
+  '/wagers/': typeof WagersIndexRoute
   '/api/public/virtual-tick': typeof ApiPublicVirtualTickRoute
   '/api/public/hooks/broadcast-push': typeof ApiPublicHooksBroadcastPushRoute
   '/api/public/hooks/process-scheduled-push': typeof ApiPublicHooksProcessScheduledPushRoute
-  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute 
-  '/quests': typeof QuestsRoute
-  '/referrals': typeof ReferralsRoute
-  '/wagers/$id': typeof WagersIdRoute
-  '/wagers/': typeof WagersIndexRoute
+  '/api/public/hooks/send-push': typeof ApiPublicHooksSendPushRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -466,6 +485,8 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/polls'
     | '/profile'
+    | '/quests'
+    | '/referrals'
     | '/register'
     | '/reset-password'
     | '/settings'
@@ -483,16 +504,16 @@ export interface FileRouteTypes {
     | '/matches/$matchId'
     | '/ticket/$id'
     | '/tournaments/$id'
+    | '/virtual/championship-shooter'
     | '/virtual/history'
+    | '/virtual/instant-shooters'
+    | '/wagers/$id'
     | '/tournaments/'
+    | '/wagers/'
     | '/api/public/virtual-tick'
     | '/api/public/hooks/broadcast-push'
     | '/api/public/hooks/process-scheduled-push'
     | '/api/public/hooks/send-push'
-     | '/quests'
-     | '/referrals'
-     | '/wagers/$id'
-     | '/wagers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -515,6 +536,8 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/polls'
     | '/profile'
+    | '/quests'
+    | '/referrals'
     | '/register'
     | '/reset-password'
     | '/settings'
@@ -532,16 +555,16 @@ export interface FileRouteTypes {
     | '/matches/$matchId'
     | '/ticket/$id'
     | '/tournaments/$id'
+    | '/virtual/championship-shooter'
     | '/virtual/history'
+    | '/virtual/instant-shooters'
+    | '/wagers/$id'
     | '/tournaments'
+    | '/wagers'
     | '/api/public/virtual-tick'
     | '/api/public/hooks/broadcast-push'
     | '/api/public/hooks/process-scheduled-push'
     | '/api/public/hooks/send-push'
-     | '/quests'
-     | '/referrals'
-     | '/wagers/$id'
-     | '/wagers'
   id:
     | '__root__'
     | '/'
@@ -564,6 +587,8 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/polls'
     | '/profile'
+    | '/quests'
+    | '/referrals'
     | '/register'
     | '/reset-password'
     | '/settings'
@@ -581,16 +606,16 @@ export interface FileRouteTypes {
     | '/matches/$matchId'
     | '/ticket/$id'
     | '/tournaments/$id'
+    | '/virtual/championship-shooter'
     | '/virtual/history'
+    | '/virtual/instant-shooters'
+    | '/wagers/$id'
     | '/tournaments/'
+    | '/wagers/'
     | '/api/public/virtual-tick'
     | '/api/public/hooks/broadcast-push'
     | '/api/public/hooks/process-scheduled-push'
     | '/api/public/hooks/send-push'
-     | '/quests'
-     | '/referrals'
-     | '/wagers/$id'
-     | '/wagers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -614,6 +639,8 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   PollsRoute: typeof PollsRoute
   ProfileRoute: typeof ProfileRoute
+  QuestsRoute: typeof QuestsRoute
+  ReferralsRoute: typeof ReferralsRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
@@ -630,15 +657,13 @@ export interface RootRouteChildren {
   WithdrawRoute: typeof WithdrawRoute
   TicketIdRoute: typeof TicketIdRoute
   TournamentsIdRoute: typeof TournamentsIdRoute
+  WagersIdRoute: typeof WagersIdRoute
   TournamentsIndexRoute: typeof TournamentsIndexRoute
+  WagersIndexRoute: typeof WagersIndexRoute
   ApiPublicVirtualTickRoute: typeof ApiPublicVirtualTickRoute
   ApiPublicHooksBroadcastPushRoute: typeof ApiPublicHooksBroadcastPushRoute
   ApiPublicHooksProcessScheduledPushRoute: typeof ApiPublicHooksProcessScheduledPushRoute
   ApiPublicHooksSendPushRoute: typeof ApiPublicHooksSendPushRoute
-  QuestsRoute: typeof QuestsRoute
-  ReferralsRoute: typeof ReferralsRoute
-  WagersIndexRoute: typeof WagersIndexRoute
-  WagersIdRoute: typeof WagersIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -739,6 +764,20 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quests': {
+      id: '/quests'
+      path: '/quests'
+      fullPath: '/quests'
+      preLoaderRoute: typeof QuestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -881,6 +920,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wagers/': {
+      id: '/wagers/'
+      path: '/wagers'
+      fullPath: '/wagers/'
+      preLoaderRoute: typeof WagersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournaments/': {
       id: '/tournaments/'
       path: '/tournaments'
@@ -888,11 +934,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TournamentsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wagers/$id': {
+      id: '/wagers/$id'
+      path: '/wagers/$id'
+      fullPath: '/wagers/$id'
+      preLoaderRoute: typeof WagersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/virtual/instant-shooters': {
+      id: '/virtual/instant-shooters'
+      path: '/instant-shooters'
+      fullPath: '/virtual/instant-shooters'
+      preLoaderRoute: typeof VirtualInstantShootersRouteImport
+      parentRoute: typeof VirtualRoute
+    }
     '/virtual/history': {
       id: '/virtual/history'
       path: '/history'
       fullPath: '/virtual/history'
       preLoaderRoute: typeof VirtualHistoryRouteImport
+      parentRoute: typeof VirtualRoute
+    }
+    '/virtual/championship-shooter': {
+      id: '/virtual/championship-shooter'
+      path: '/championship-shooter'
+      fullPath: '/virtual/championship-shooter'
+      preLoaderRoute: typeof VirtualChampionshipShooterRouteImport
       parentRoute: typeof VirtualRoute
     }
     '/tournaments/$id': {
@@ -944,34 +1011,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBroadcastPushRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/quests': {
-      id: '/quests'
-      path: '/quests'
-      fullPath: '/quests'
-      preLoaderRoute: typeof QuestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/referrals': {
-      id: '/referrals'
-      path: '/referrals'
-      fullPath: '/referrals'
-      preLoaderRoute: typeof ReferralsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wagers/': {
-      id: '/wagers/'
-      path: '/wagers'
-      fullPath: '/wagers/'
-      preLoaderRoute: typeof WagersIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wagers/$id': {
-      id: '/wagers/$id'
-      path: '/wagers/$id'
-      fullPath: '/wagers/$id'
-      preLoaderRoute: typeof WagersIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -987,11 +1026,15 @@ const MatchesRouteWithChildren =
   MatchesRoute._addFileChildren(MatchesRouteChildren)
 
 interface VirtualRouteChildren {
+  VirtualChampionshipShooterRoute: typeof VirtualChampionshipShooterRoute
   VirtualHistoryRoute: typeof VirtualHistoryRoute
+  VirtualInstantShootersRoute: typeof VirtualInstantShootersRoute
 }
 
 const VirtualRouteChildren: VirtualRouteChildren = {
+  VirtualChampionshipShooterRoute: VirtualChampionshipShooterRoute,
   VirtualHistoryRoute: VirtualHistoryRoute,
+  VirtualInstantShootersRoute: VirtualInstantShootersRoute,
 }
 
 const VirtualRouteWithChildren =
@@ -1018,6 +1061,8 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   PollsRoute: PollsRoute,
   ProfileRoute: ProfileRoute,
+  QuestsRoute: QuestsRoute,
+  ReferralsRoute: ReferralsRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
@@ -1034,16 +1079,14 @@ const rootRouteChildren: RootRouteChildren = {
   WithdrawRoute: WithdrawRoute,
   TicketIdRoute: TicketIdRoute,
   TournamentsIdRoute: TournamentsIdRoute,
+  WagersIdRoute: WagersIdRoute,
   TournamentsIndexRoute: TournamentsIndexRoute,
+  WagersIndexRoute: WagersIndexRoute,
   ApiPublicVirtualTickRoute: ApiPublicVirtualTickRoute,
   ApiPublicHooksBroadcastPushRoute: ApiPublicHooksBroadcastPushRoute,
   ApiPublicHooksProcessScheduledPushRoute:
     ApiPublicHooksProcessScheduledPushRoute,
   ApiPublicHooksSendPushRoute: ApiPublicHooksSendPushRoute,
-  QuestsRoute: QuestsRoute,
-  ReferralsRoute: ReferralsRoute,
-  WagersIndexRoute: WagersIndexRoute,
-  WagersIdRoute: WagersIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
