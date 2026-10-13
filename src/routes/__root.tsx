@@ -239,7 +239,7 @@ function RootComponent() {
             <PopupAd />
             <BetSlipFab />
             <RouteProgress />
-            <Toaster />
+            <Toaster position="top-center" richColors closeButton offset="calc(env(safe-area-inset-top, 0px) + 12px)" />
           </ConfirmProvider>
         </BetSlipProvider>
       </AuthProvider>
