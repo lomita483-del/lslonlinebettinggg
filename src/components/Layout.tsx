@@ -234,8 +234,8 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <div className="min-h-screen grid place-items-center bg-background px-4 py-10">
         <div className="w-full max-w-md rounded-2xl border border-primary/30 bg-card p-6 text-center shadow-2xl space-y-4">
           {branding.logoUrl ? <img src={branding.logoUrl} alt={branding.name || "League"} className="mx-auto h-16 w-16 object-contain" /> : <GangLogo size={64} className="mx-auto" />}
-          <h1 className="text-2xl font-black gradient-gold-text">Private Website</h1>
-          <p className="text-sm text-muted-foreground">This website is currently available to signed-in members only. Sign in or create an account to continue.</p>
+          <h1 className="text-2xl font-black gradient-gold-text">Your League. Your Legacy.</h1>
+          <p className="text-sm text-muted-foreground">Step into the action, back your gang, and build your name in the Lomita Shooters League. Sign in or create your account to get started.</p>
           <div className="flex justify-center gap-3">
             <Link to="/login"><Button className="btn-luxury">Sign in</Button></Link>
             <Link to="/register"><Button variant="outline">Create account</Button></Link>
