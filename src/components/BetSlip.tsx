@@ -219,7 +219,7 @@ function BetSlipDrawer({ open, onClose }: { open: boolean; onClose: () => void }
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && closeAll()}>
-      <SheetContent side="right" className="w-full sm:max-w-md h-[100dvh] max-h-[100dvh] backdrop-blur-2xl bg-card/90 border-l-primary/30 p-0 overflow-y-auto">
+      <SheetContent side="bottom" className="w-full h-[min(82dvh,760px)] max-h-[90dvh] rounded-t-2xl border-t border-primary/30 backdrop-blur-2xl bg-card/95 p-0 overflow-y-auto">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-gold" />
         <SheetHeader>
           <SheetTitle className="flex items-center gap-3 px-6 pt-6">
